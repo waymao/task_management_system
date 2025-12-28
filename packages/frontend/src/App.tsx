@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
@@ -6,6 +7,8 @@ import { CapturePage } from './pages/CapturePage';
 import { TrashPage } from './pages/TrashPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { AssignmentBoardPage } from './pages/AssignmentBoardPage';
+import { FloatingActionButton } from './components/common/FloatingActionButton';
+import { QuickCaptureModal } from './components/capture/QuickCaptureModal';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,6 +20,8 @@ const queryClient = new QueryClient({
 });
 
 function Layout({ children }: { children: React.ReactNode }) {
+  const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b border-gray-200">
@@ -32,12 +37,6 @@ function Layout({ children }: { children: React.ReactNode }) {
                 className="px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 Dashboard
-              </Link>
-              <Link
-                to="/capture"
-                className="px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Capture
               </Link>
               <Link
                 to="/calendar"
@@ -65,6 +64,12 @@ function Layout({ children }: { children: React.ReactNode }) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
+
+      <FloatingActionButton onClick={() => setIsQuickCaptureOpen(true)} />
+      <QuickCaptureModal
+        isOpen={isQuickCaptureOpen}
+        onClose={() => setIsQuickCaptureOpen(false)}
+      />
     </div>
   );
 }

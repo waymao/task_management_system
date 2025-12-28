@@ -68,6 +68,7 @@ export function useCompleteTask() {
     mutationFn: (id: string) => tasksApi.complete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
       toast.success('Task completed');
     },
   });
@@ -80,6 +81,7 @@ export function useUncompleteTask() {
     mutationFn: (id: string) => tasksApi.uncomplete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
       toast.success('Task marked as pending');
     },
   });

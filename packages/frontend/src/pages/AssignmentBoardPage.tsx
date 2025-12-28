@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format, addWeeks, subWeeks, startOfWeek, addDays, startOfDay, endOfDay } from 'date-fns';
 import { useAssignments, useUnassignedTasks, useCreateAssignment, useDeleteAssignment } from '../hooks/useAssignments';
-import { useFollowUpTasks } from '../hooks/useTasks';
+import { useFollowUpTasks, useCompleteTask, useUncompleteTask } from '../hooks/useTasks';
 import { useGoogleCalendarEvents, useRefreshGoogleCalendarEvents } from '../hooks/useGoogleCalendar';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -47,6 +47,8 @@ export function AssignmentBoardPage() {
   const refreshEventsMutation = useRefreshGoogleCalendarEvents();
   const createAssignment = useCreateAssignment();
   const deleteAssignment = useDeleteAssignment();
+  const completeTask = useCompleteTask();
+  const uncompleteTask = useUncompleteTask();
 
   // Separate hooks for reschedule operation (no toasts)
   const createAssignmentSilent = useCreateAssignment({ showToast: false });
@@ -349,66 +351,88 @@ export function AssignmentBoardPage() {
 
                     
                     {/* Regular assignments (draggable) */}
-                    {slotAssignments.map(assignment => (
-                      <div
-                        key={assignment.id}
-                        draggable
-                        onDragStart={(e) => assignment.task && handleDragStart(e, assignment.task, assignment.id)}
-                        onDragEnd={handleDragEnd}
-                        onClick={(e) => {
-                          // Don't open modal if clicking the delete button
-                          if (!(e.target as HTMLElement).closest('button')) {
-                            setSelectedTask(assignment.task || null);
-                          }
-                        }}
-                        onMouseEnter={(e) => {
-                          if (assignment.task) {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            const tooltipWidth = 384; // max-w-sm is roughly 384px
-                            const tooltipHeight = 200; // estimated height
-                            const padding = 10;
-
-                            // Calculate horizontal position (prefer right, but use left if near edge)
-                            const spaceOnRight = window.innerWidth - rect.right;
-                            const x = spaceOnRight > tooltipWidth + padding
-                              ? rect.right + padding  // Show on right
-                              : rect.left - padding;  // Show on left
-
-                            // Calculate vertical position (adjust if near bottom)
-                            const spaceBelow = window.innerHeight - rect.top;
-                            const y = spaceBelow > tooltipHeight
-                              ? rect.top  // Align with top
-                              : Math.max(padding, rect.bottom - tooltipHeight);  // Adjust upward
-
-                            setHoveredTask({
-                              task: assignment.task,
-                              x: Math.max(padding, x),  // Don't go off left edge
-                              y
-                            });
-                          }
-                        }}
-                        onMouseLeave={() => setHoveredTask(null)}
-                        className={`
-                          text-xs p-1.5 rounded group relative cursor-pointer transition-all
-                          ${assignment.task?.priority === 'high' ? 'bg-red-100 text-red-800' : ''}
-                          ${assignment.task?.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : ''}
-                          ${assignment.task?.priority === 'low' ? 'bg-green-100 text-green-800' : ''}
-                          ${draggedTask?.id === assignment.task?.id && draggedAssignmentId === assignment.id ? 'opacity-50 scale-95' : 'hover:shadow-md'}
-                        `}
-                      >
-                        <div className="truncate font-medium">{assignment.task?.title}</div>
-                        <button
+                    {slotAssignments.map(assignment => {
+                      const isCompleted = assignment.task?.status === 'completed';
+                      return (
+                        <div
+                          key={assignment.id}
+                          draggable
+                          onDragStart={(e) => assignment.task && handleDragStart(e, assignment.task, assignment.id)}
+                          onDragEnd={handleDragEnd}
                           onClick={(e) => {
-                            e.stopPropagation();
-                            setHoveredTask(null);  // Close tooltip when delete is clicked
-                            deleteAssignment.mutate(assignment.id);
+                            // Don't open modal if clicking the delete button or checkbox
+                            const target = e.target as HTMLElement;
+                            if (!target.closest('button') && !target.closest('input[type="checkbox"]')) {
+                              setSelectedTask(assignment.task || null);
+                            }
                           }}
-                          className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800"
+                          onMouseEnter={(e) => {
+                            if (assignment.task) {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const tooltipWidth = 384; // max-w-sm is roughly 384px
+                              const tooltipHeight = 200; // estimated height
+                              const padding = 10;
+
+                              // Calculate horizontal position (prefer right, but use left if near edge)
+                              const spaceOnRight = window.innerWidth - rect.right;
+                              const x = spaceOnRight > tooltipWidth + padding
+                                ? rect.right + padding  // Show on right
+                                : rect.left - padding;  // Show on left
+
+                              // Calculate vertical position (adjust if near bottom)
+                              const spaceBelow = window.innerHeight - rect.top;
+                              const y = spaceBelow > tooltipHeight
+                                ? rect.top  // Align with top
+                                : Math.max(padding, rect.bottom - tooltipHeight);  // Adjust upward
+
+                              setHoveredTask({
+                                task: assignment.task,
+                                x: Math.max(padding, x),  // Don't go off left edge
+                                y
+                              });
+                            }
+                          }}
+                          onMouseLeave={() => setHoveredTask(null)}
+                          className={`
+                            text-xs p-1.5 rounded group relative cursor-pointer transition-all flex items-start gap-1.5
+                            ${isCompleted ? 'bg-gray-100 text-gray-500 opacity-75' : ''}
+                            ${!isCompleted && assignment.task?.priority === 'high' ? 'bg-red-100 text-red-800' : ''}
+                            ${!isCompleted && assignment.task?.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : ''}
+                            ${!isCompleted && assignment.task?.priority === 'low' ? 'bg-green-100 text-green-800' : ''}
+                            ${draggedTask?.id === assignment.task?.id && draggedAssignmentId === assignment.id ? 'opacity-50 scale-95' : 'hover:shadow-md'}
+                          `}
                         >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
+                          <input
+                            type="checkbox"
+                            checked={isCompleted}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              if (assignment.task) {
+                                if (isCompleted) {
+                                  uncompleteTask.mutate(assignment.task.id);
+                                } else {
+                                  completeTask.mutate(assignment.task.id);
+                                }
+                              }
+                            }}
+                            className="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer flex-shrink-0"
+                          />
+                          <div className={`truncate font-medium flex-1 ${isCompleted ? 'line-through' : ''}`}>
+                            {assignment.task?.title}
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setHoveredTask(null);  // Close tooltip when delete is clicked
+                              deleteAssignment.mutate(assignment.id);
+                            }}
+                            className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 flex-shrink-0"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
 
                     {/* Follow-up reminders (non-draggable, static) */}
                     {followUps.map(task => (

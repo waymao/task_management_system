@@ -4,7 +4,7 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { Textarea } from './Textarea';
 import { Select } from './Select';
-import { useUpdateTask, useCompleteTask, useUncompleteTask } from '../../hooks/useTasks';
+import { useUpdateTask, useCompleteTask, useUncompleteTask, useDeleteTask } from '../../hooks/useTasks';
 import type { Task, TaskPriority, TaskStatus } from '../../types';
 
 interface TaskDetailModalProps {
@@ -27,6 +27,7 @@ export function TaskDetailModal({ task, onClose, readOnly = false }: TaskDetailM
   const updateTask = useUpdateTask();
   const completeTask = useCompleteTask();
   const uncompleteTask = useUncompleteTask();
+  const deleteTask = useDeleteTask();
 
   const handleSave = () => {
     updateTask.mutate(
@@ -56,6 +57,14 @@ export function TaskDetailModal({ task, onClose, readOnly = false }: TaskDetailM
       });
     } else {
       completeTask.mutate(task.id, {
+        onSuccess: () => onClose(),
+      });
+    }
+  };
+
+  const handleDelete = () => {
+    if (confirm('Are you sure you want to delete this task?')) {
+      deleteTask.mutate(task.id, {
         onSuccess: () => onClose(),
       });
     }
@@ -270,6 +279,14 @@ export function TaskDetailModal({ task, onClose, readOnly = false }: TaskDetailM
                   disabled={completeTask.isPending || uncompleteTask.isPending}
                 >
                   {task.status === 'completed' ? 'Mark as Pending' : 'Mark as Complete'}
+                </Button>
+                <div className="flex-1" />
+                <Button
+                  variant="danger"
+                  onClick={handleDelete}
+                  disabled={deleteTask.isPending}
+                >
+                  {deleteTask.isPending ? 'Deleting...' : 'Delete'}
                 </Button>
               </div>
             )}
