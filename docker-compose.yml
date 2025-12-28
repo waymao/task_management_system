@@ -24,6 +24,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:3000/api/google/callback}
+      PRODUCTION_CORS_ORIGIN: ${PRODUCTION_CORS_ORIGIN}
 
       # Default user
       DEFAULT_USER_ID: ${DEFAULT_USER_ID:-default-user-1}

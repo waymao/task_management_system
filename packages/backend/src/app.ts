@@ -6,6 +6,7 @@ import { assignmentsRoutes } from './routes/assignments.js';
 import { googleCalendarRoutes } from './routes/google-calendar.js';
 import { AppError } from './utils/errors.js';
 import type { ApiError } from './types/index.js';
+import { env } from 'process';
 
 export async function buildApp() {
   const app = Fastify({
@@ -19,11 +20,14 @@ export async function buildApp() {
   await app.register(cors, {
     origin: (origin, cb) => {
       // Allow same-origin requests (!origin) and specific localhost origins
-      const allowedOrigins = [
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        'http://localhost:3000',
-      ];
+      const allowedOrigins = (env.PRODUCTION_CORS_ORIGIN === "" || env.PRODUCTION_CORS_ORIGIN === undefined) ? [
+          'http://localhost:5173',
+          'http://127.0.0.1:5173',
+          'http://localhost:3000'
+        ] : [
+          env.PRODUCTION_CORS_ORIGIN
+        ];
+      app.log.info(`CORS: Configured allowed origins: ${allowedOrigins.join(', ')}`);
 
       if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
         cb(null, true);
