@@ -59,12 +59,26 @@ export async function googleCalendarRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
-  // Fetch events from Google Calendar
+  // Fetch events from Google Calendar (syncs with Google and updates DB)
   app.get('/google/events', async (request, reply) => {
     const { startDate, endDate } = eventsQuerySchema.parse(request.query);
     const userId = process.env.DEFAULT_USER_ID || 'default-user-1';
 
     const events = await GoogleCalendarService.fetchEventsFromGoogle(
+      userId,
+      new Date(startDate),
+      new Date(endDate)
+    );
+
+    return { events };
+  });
+
+  // Get cached events from database (faster, no API call to Google)
+  app.get('/google/events/cached', async (request, reply) => {
+    const { startDate, endDate } = eventsQuerySchema.parse(request.query);
+    const userId = process.env.DEFAULT_USER_ID || 'default-user-1';
+
+    const events = await GoogleCalendarService.getStoredEvents(
       userId,
       new Date(startDate),
       new Date(endDate)

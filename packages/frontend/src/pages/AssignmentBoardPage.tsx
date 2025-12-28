@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { format, addWeeks, subWeeks, startOfWeek, addDays, startOfDay, endOfDay } from 'date-fns';
 import { useAssignments, useUnassignedTasks, useCreateAssignment, useDeleteAssignment } from '../hooks/useAssignments';
 import { useFollowUpTasks } from '../hooks/useTasks';
-import { useGoogleCalendarEvents } from '../hooks/useGoogleCalendar';
+import { useGoogleCalendarEvents, useRefreshGoogleCalendarEvents } from '../hooks/useGoogleCalendar';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { TaskDetailModal } from '../components/common/TaskDetailModal';
@@ -44,6 +44,7 @@ export function AssignmentBoardPage() {
   const { data: unassignedTasks } = useUnassignedTasks();
   const { data: followUpTasks } = useFollowUpTasks({ startDate, endDate });
   const { data: googleEvents } = useGoogleCalendarEvents(startDate, endDate);
+  const refreshEventsMutation = useRefreshGoogleCalendarEvents();
   const createAssignment = useCreateAssignment();
   const deleteAssignment = useDeleteAssignment();
 
@@ -67,6 +68,20 @@ export function AssignmentBoardPage() {
     });
   };
   const handleToday = () => setCurrentDay(new Date());
+
+  const handleRefreshEvents = () => {
+    refreshEventsMutation.mutate(
+      { startDate, endDate },
+      {
+        onSuccess: () => {
+          toast.success('Calendar events refreshed');
+        },
+        onError: () => {
+          toast.error('Failed to refresh events');
+        },
+      }
+    );
+  };
 
   const getAssignmentsForSlot = (date: Date, slot: TimeSlot) => {
     if (!assignments) return [];
@@ -209,6 +224,15 @@ export function AssignmentBoardPage() {
           </Button>
           <Button size="sm" variant="ghost" onClick={handleNextWeek}>
             Next →
+          </Button>
+          <div className="border-l border-gray-300 h-6 mx-1"></div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleRefreshEvents}
+            disabled={refreshEventsMutation.isPending}
+          >
+            {refreshEventsMutation.isPending ? 'Refreshing...' : '🔄 Refresh Events'}
           </Button>
         </div>
 

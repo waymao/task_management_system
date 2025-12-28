@@ -96,6 +96,7 @@ model GoogleCalendarAccount {
   updatedAt    DateTime                    @updatedAt
 
   @@unique([userId, email])
+  @@index([userId])
   @@map("google_calendar_accounts")
 }
 
@@ -128,5 +129,7 @@ model GoogleCalendarEvent {
 
   @@unique([accountId, eventId])
   @@index([accountId, startTime])
+  @@index([accountId, endTime])
+  @@index([accountId, startTime, endTime])
   @@map("google_calendar_events")
 }

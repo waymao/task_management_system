@@ -129,3 +129,20 @@ export function useUpdateCalendarPreference(accountId: string) {
     },
   });
 }
+
+export function useRefreshGoogleCalendarEvents() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ startDate, endDate }: { startDate: string; endDate: string }) => {
+      const response = await apiClient.get<{ events: GoogleCalendarEvent[] }>('/google/events', {
+        params: { startDate, endDate },
+      });
+      return response.data.events;
+    },
+    onSuccess: () => {
+      // Invalidate all calendar event queries to refetch with fresh data
+      queryClient.invalidateQueries({ queryKey: ['google-calendar-events'] });
+    },
+  });
+}

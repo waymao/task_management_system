@@ -1,7 +1,7 @@
 import { useTasks } from '../hooks/useTasks';
 import { Calendar } from '../components/calendar/Calendar';
 import { useState, useEffect, useMemo } from 'react';
-import { useGoogleCalendarAuth, useGoogleCalendarAccounts, useDisconnectGoogleCalendar, useGoogleCalendarEvents, useSyncCalendarList, useCalendarPreferences, useUpdateCalendarPreference } from '../hooks/useGoogleCalendar';
+import { useGoogleCalendarAuth, useGoogleCalendarAccounts, useDisconnectGoogleCalendar, useGoogleCalendarEvents, useSyncCalendarList, useCalendarPreferences, useUpdateCalendarPreference, useRefreshGoogleCalendarEvents } from '../hooks/useGoogleCalendar';
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { TaskDetailModal } from '../components/common/TaskDetailModal';
@@ -23,6 +23,7 @@ export function CalendarPage() {
   const { data: authData } = useGoogleCalendarAuth();
   const { data: googleAccounts, isLoading: accountsLoading } = useGoogleCalendarAccounts();
   const disconnectMutation = useDisconnectGoogleCalendar();
+  const refreshEventsMutation = useRefreshGoogleCalendarEvents();
 
   // Calendar preferences
   const { data: calendarPreferences, isLoading: preferencesLoading } = useCalendarPreferences(selectedAccountId);
@@ -107,6 +108,25 @@ export function CalendarPage() {
     );
   };
 
+  const handleRefreshEvents = () => {
+    if (!googleAccounts || googleAccounts.length === 0) {
+      toast.error('No Google Calendar connected');
+      return;
+    }
+
+    refreshEventsMutation.mutate(
+      { startDate, endDate },
+      {
+        onSuccess: () => {
+          toast.success('Calendar events refreshed');
+        },
+        onError: () => {
+          toast.error('Failed to refresh events');
+        },
+      }
+    );
+  };
+
   // Merge tasks with Google Calendar events (convert events to task-like objects)
   // IMPORTANT: This must be before any conditional returns to follow Rules of Hooks
   const allTasks = useMemo(() => {
@@ -161,13 +181,25 @@ export function CalendarPage() {
             View your tasks by their due dates
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowGoogleSettings(!showGoogleSettings)}
-        >
-          {showGoogleSettings ? 'Hide' : 'Show'} Google Calendar Settings
-        </Button>
+        <div className="flex items-center gap-2">
+          {googleAccounts && googleAccounts.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefreshEvents}
+              disabled={refreshEventsMutation.isPending}
+            >
+              {refreshEventsMutation.isPending ? 'Refreshing...' : '🔄 Refresh Events'}
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowGoogleSettings(!showGoogleSettings)}
+          >
+            {showGoogleSettings ? 'Hide' : 'Show'} Google Calendar Settings
+          </Button>
+        </div>
       </div>
 
       {showGoogleSettings && (

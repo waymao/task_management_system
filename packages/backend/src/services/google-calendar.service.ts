@@ -436,4 +436,52 @@ export class GoogleCalendarService {
 
     return allEvents;
   }
+
+  /**
+   * Efficiently query stored calendar events from the database by date range.
+   * Uses the composite index [accountId, startTime, endTime] for optimal performance.
+   *
+   * @param userId - The user ID to query events for
+   * @param startDate - Start of the date range
+   * @param endDate - End of the date range
+   * @returns Array of calendar events that overlap with the given date range
+   */
+  static async getStoredEvents(userId: string, startDate: Date, endDate: Date) {
+    // Get all accounts for this user
+    const accounts = await prisma.googleCalendarAccount.findMany({
+      where: { userId },
+      select: { id: true, email: true },
+    });
+
+    const accountIds = accounts.map(a => a.id);
+
+    if (accountIds.length === 0) {
+      return [];
+    }
+
+    // Query events that overlap with the date range
+    // An event overlaps if: event.startTime <= endDate AND event.endTime >= startDate
+    const events = await prisma.googleCalendarEvent.findMany({
+      where: {
+        accountId: { in: accountIds },
+        startTime: { lte: endDate },
+        endTime: { gte: startDate },
+      },
+      orderBy: { startTime: 'asc' },
+      include: {
+        account: {
+          select: { email: true },
+        },
+      },
+    });
+
+    return events.map(event => ({
+      id: event.eventId,
+      title: event.title,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      isAllDay: event.isAllDay,
+      accountEmail: event.account.email,
+    }));
+  }
 }
