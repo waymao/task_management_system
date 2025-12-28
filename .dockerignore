@@ -1,0 +1,55 @@
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist
+build
+*.tsbuildinfo
+
+# Development files
+*.log
+coverage
+.nyc_output
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Database files (we'll use volumes)
+*.db
+*.db-journal
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+test
+tests
+__tests__
+
+# Documentation
+*.md
+docs
+
+# Frontend package (not needed for backend build)
+packages/frontend
+
+# Prisma migrations (optional - uncomment if you want to exclude)
+# packages/backend/prisma/migrations

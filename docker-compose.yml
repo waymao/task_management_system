@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./packages/backend/Dockerfile
+    container_name: agenda-backend
+    ports:
+      - "3000:3000"
+    environment:
+      # Database
+      DATABASE_URL: "file:/app/data/prod.db"
+      PORT: 3000
+      NODE_ENV: production
+
+      # Logging
+      LOG_LEVEL: info
+
+      # PM2 Configuration
+      PM2_INSTANCES: ${PM2_INSTANCES:-1}  # Set to 'max' for all CPU cores, or specific number
+
+      # Google Calendar OAuth (set these in .env file or override here)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:3000/api/google/callback}
+
+      # Default user
+      DEFAULT_USER_ID: ${DEFAULT_USER_ID:-default-user-1}
+
+    volumes:
+      # Persist SQLite database
+      - backend-data:/app/data
+
+      # Optional: Mount tokens directory for Google OAuth
+      - backend-tokens:/app/tokens
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  backend-data:
+    driver: local
+  backend-tokens:
+    driver: local
