@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String?  @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks                  Task[]
+  projects               Project[]
+  assignments            Assignment[]
+  googleCalendarAccounts GoogleCalendarAccount[]
+
+  @@map("users")
+}
+
+model Task {
+  id           String    @id @default(uuid())
+  title        String
+  description  String?
+  type         String    // 'todo' | 'delegated' | 'immediate'
+  status       String    @default("pending") // 'pending' | 'completed' | 'cancelled'
+  priority     String    @default("medium") // 'low' | 'medium' | 'high'
+  dueDate      DateTime?
+  delegatedTo  String?
+  followUpDate DateTime?
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  assignments  Assignment[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  @@index([userId, status])
+  @@index([userId, type])
+  @@index([dueDate])
+  @@index([deletedAt])
+  @@map("tasks")
+}
+
+model Assignment {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  slot      String   // 'morning' | 'afternoon' | 'evening'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([taskId, date, slot])
+  @@index([userId, date])
+  @@map("assignments")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  color       String?  @default("#3b82f6")
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content     String?
+  contentType String   @default("tasks_only") // 'tasks_only' | 'notes' | 'mixed'
+  metadata    String?  // JSON string for extensibility
+  tasks       Task[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("projects")
+}
+
+model GoogleCalendarAccount {
+  id           String                @id @default(uuid())
+  userId       String
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email        String
+  refreshToken String
+  accessToken  String
+  expiresAt    DateTime
+  events       GoogleCalendarEvent[]
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@unique([userId, email])
+  @@map("google_calendar_accounts")
+}
+
+model GoogleCalendarEvent {
+  id        String                @id @default(uuid())
+  accountId String
+  account   GoogleCalendarAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  eventId   String
+  title     String
+  startTime DateTime
+  endTime   DateTime
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  @@unique([accountId, eventId])
+  @@index([accountId, startTime])
+  @@map("google_calendar_events")
+}
