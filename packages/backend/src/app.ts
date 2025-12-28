@@ -64,13 +64,14 @@ export async function buildApp() {
     }
 
     // Handle validation errors
-    if (error.validation) {
+    if (error && typeof error === 'object' && 'validation' in error) {
+      const validationError = error as { validation: unknown };
       const response: ApiError = {
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
           message: 'Validation failed',
-          details: error.validation,
+          details: validationError.validation,
         },
       };
 
@@ -79,13 +80,14 @@ export async function buildApp() {
     }
 
     // Handle unknown errors
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const response: ApiError = {
       success: false,
       error: {
         code: 'INTERNAL_ERROR',
         message: process.env.NODE_ENV === 'production'
           ? 'An internal error occurred'
-          : error.message,
+          : errorMessage,
       },
     };
 

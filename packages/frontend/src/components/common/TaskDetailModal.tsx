@@ -5,7 +5,7 @@ import { Input } from './Input';
 import { Textarea } from './Textarea';
 import { Select } from './Select';
 import { useUpdateTask, useCompleteTask, useUncompleteTask, useDeleteTask } from '../../hooks/useTasks';
-import type { Task, TaskPriority, TaskStatus } from '../../types';
+import type { Task, TaskPriority } from '../../types';
 
 interface TaskDetailModalProps {
   task: Task;
@@ -35,11 +35,11 @@ export function TaskDetailModal({ task, onClose, readOnly = false }: TaskDetailM
         id: task.id,
         data: {
           title: editedTask.title,
-          description: editedTask.description || null,
+          description: editedTask.description || undefined,
           priority: editedTask.priority,
-          dueDate: editedTask.dueDate || null,
-          delegatedTo: editedTask.delegatedTo || null,
-          followUpDate: editedTask.followUpDate || null,
+          dueDate: editedTask.dueDate || undefined,
+          delegatedTo: editedTask.delegatedTo || undefined,
+          followUpDate: editedTask.followUpDate || undefined,
         },
       },
       {

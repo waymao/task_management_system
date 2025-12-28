@@ -109,7 +109,6 @@ export function AssignmentBoardPage() {
     const start = new Date(startTime);
     const end = new Date(endTime);
     const startHour = start.getHours();
-    const endHour = end.getHours();
 
     // If event spans more than 6 hours, consider it all-day
     const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
