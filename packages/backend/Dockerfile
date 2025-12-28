@@ -58,7 +58,7 @@ COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
 COPY packages/backend/ecosystem.config.cjs ./packages/backend/
 
 # Copy compiled seed script
-COPY --from=builder /app/packages/backend/dist/prisma/seed.js ./packages/backend/dist/
+COPY --from=builder /app/packages/backend/dist/seed.js ./packages/backend/dist/
 
 # Create directory for SQLite database
 RUN mkdir -p /app/data
