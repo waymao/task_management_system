@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import { tasksRoutes } from './routes/tasks.js';
 import { healthRoutes } from './routes/health.js';
 import { assignmentsRoutes } from './routes/assignments.js';
+import { googleCalendarRoutes } from './routes/google-calendar.js';
 import { AppError } from './utils/errors.js';
 import type { ApiError } from './types/index.js';
 
@@ -38,6 +39,7 @@ export async function buildApp() {
   // Register routes
   await app.register(tasksRoutes, { prefix: '/api/tasks' });
   await app.register(assignmentsRoutes, { prefix: '/api/assignments' });
+  await app.register(googleCalendarRoutes, { prefix: '/api' });
   await app.register(healthRoutes, { prefix: '/api/health' });
 
   // Global error handler

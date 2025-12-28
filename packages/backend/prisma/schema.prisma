@@ -83,19 +83,35 @@ model Project {
 }
 
 model GoogleCalendarAccount {
-  id           String                @id @default(uuid())
+  id           String                      @id @default(uuid())
   userId       String
-  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
   email        String
   refreshToken String
   accessToken  String
   expiresAt    DateTime
   events       GoogleCalendarEvent[]
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
+  calendars    GoogleCalendarPreference[]
+  createdAt    DateTime                    @default(now())
+  updatedAt    DateTime                    @updatedAt
 
   @@unique([userId, email])
   @@map("google_calendar_accounts")
+}
+
+model GoogleCalendarPreference {
+  id           String                @id @default(uuid())
+  accountId    String
+  account      GoogleCalendarAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  calendarId   String
+  calendarName String
+  enabled      Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@unique([accountId, calendarId])
+  @@index([accountId, enabled])
+  @@map("google_calendar_preferences")
 }
 
 model GoogleCalendarEvent {
@@ -106,6 +122,7 @@ model GoogleCalendarEvent {
   title     String
   startTime DateTime
   endTime   DateTime
+  isAllDay  Boolean               @default(false)
   createdAt DateTime              @default(now())
   updatedAt DateTime              @updatedAt
 
