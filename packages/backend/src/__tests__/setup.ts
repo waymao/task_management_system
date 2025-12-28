@@ -19,6 +19,7 @@ beforeAll(async () => {
       id: 'test-user-1',
       name: 'Test User',
       email: 'test@example.com',
+      password: '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', // bcrypt hash of "testpassword"
     },
   });
 });

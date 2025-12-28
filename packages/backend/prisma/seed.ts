@@ -11,6 +11,7 @@ async function main() {
       id: 'default-user-1',
       name: 'Default User',
       email: 'user@example.com',
+      password: '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', // bcrypt hash of "password123"
     },
   });
 
