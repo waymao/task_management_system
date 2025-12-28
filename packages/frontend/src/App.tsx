@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { DashboardPage } from './pages/DashboardPage';
@@ -21,6 +21,17 @@ const queryClient = new QueryClient({
 
 function Layout({ children }: { children: React.ReactNode }) {
   const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
+
+  const navLinkClass = (path: string) => {
+    const baseClass = "px-4 py-2 rounded-lg transition-colors";
+    const activeClass = "bg-primary-600 text-white";
+    const inactiveClass = "text-gray-700 hover:text-primary-600 hover:bg-gray-100";
+    return `${baseClass} ${isActive(path) ? activeClass : inactiveClass}`;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -31,33 +42,89 @@ function Layout({ children }: { children: React.ReactNode }) {
               <span className="text-2xl">📝</span>
               <h1 className="text-xl font-bold text-gray-900">Agenda Management</h1>
             </div>
-            <div className="flex gap-4">
-              <Link
-                to="/dashboard"
-                className="px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex gap-4">
+              <Link to="/dashboard" className={navLinkClass('/dashboard')}>
                 Dashboard
               </Link>
-              <Link
-                to="/calendar"
-                className="px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+              <Link to="/calendar" className={navLinkClass('/calendar')}>
                 Calendar
               </Link>
-              <Link
-                to="/assignments"
-                className="px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+              <Link to="/assignments" className={navLinkClass('/assignments')}>
                 Assignments
               </Link>
-              <Link
-                to="/trash"
-                className="px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+              <Link to="/trash" className={navLinkClass('/trash')}>
                 Trash
               </Link>
             </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              <svg
+                className="w-6 h-6 text-gray-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                {isMobileMenuOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                )}
+              </svg>
+            </button>
           </div>
+
+          {/* Mobile Navigation */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden py-4 border-t border-gray-200">
+              <div className="flex flex-col gap-2">
+                <Link
+                  to="/dashboard"
+                  className={navLinkClass('/dashboard')}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to="/calendar"
+                  className={navLinkClass('/calendar')}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Calendar
+                </Link>
+                <Link
+                  to="/assignments"
+                  className={navLinkClass('/assignments')}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Assignments
+                </Link>
+                <Link
+                  to="/trash"
+                  className={navLinkClass('/trash')}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Trash
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
