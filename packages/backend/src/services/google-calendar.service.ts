@@ -2,14 +2,17 @@ import { google } from 'googleapis';
 import { prisma } from '../db/prisma.js';
 import type { Assignment } from '@prisma/client';
 
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI
-);
-
 export class GoogleCalendarService {
+  private static createOAuth2Client() {
+    return new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
+    );
+  }
+
   static getAuthUrl(userId: string) {
+    const oauth2Client = this.createOAuth2Client();
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: [
@@ -24,6 +27,8 @@ export class GoogleCalendarService {
   }
 
   static async handleOAuthCallback(code: string, userId: string) {
+    const oauth2Client = this.createOAuth2Client();
+
     // Exchange authorization code for tokens
     const { tokens } = await oauth2Client.getToken(code);
 
@@ -41,8 +46,10 @@ export class GoogleCalendarService {
       throw new Error('Failed to get user email from Google');
     }
 
-    // Calculate expiration time
-    const expiresAt = new Date(Date.now() + (tokens.expiry_date || 3600 * 1000));
+    // Calculate expiration time (expiry_date is already an absolute timestamp, not a duration)
+    const expiresAt = tokens.expiry_date
+      ? new Date(tokens.expiry_date)
+      : new Date(Date.now() + 3600 * 1000);
 
     // Store or update the Google Calendar account
     const account = await prisma.googleCalendarAccount.upsert({
@@ -92,6 +99,7 @@ export class GoogleCalendarService {
 
     // Revoke the token with Google
     try {
+      const oauth2Client = this.createOAuth2Client();
       oauth2Client.setCredentials({ access_token: account.accessToken });
       await oauth2Client.revokeCredentials();
     } catch (error) {
@@ -105,28 +113,40 @@ export class GoogleCalendarService {
   }
 
   static async refreshAccessToken(account: { refreshToken: string; id: string }) {
+    console.log(`[DEBUG] Refreshing access token for account ${account.id}`);
+    const oauth2Client = this.createOAuth2Client();
     oauth2Client.setCredentials({
       refresh_token: account.refreshToken,
     });
 
-    const { credentials } = await oauth2Client.refreshAccessToken();
+    try {
+      const { credentials } = await oauth2Client.refreshAccessToken();
 
-    if (!credentials.access_token) {
-      throw new Error('Failed to refresh access token');
+      if (!credentials.access_token) {
+        throw new Error('Failed to refresh access token');
+      }
+
+      console.log(`[DEBUG] Successfully refreshed token, new token (first 20 chars): ${credentials.access_token?.substring(0, 20)}...`);
+
+      // Calculate expiration time (expiry_date is already an absolute timestamp, not a duration)
+      const expiresAt = credentials.expiry_date
+        ? new Date(credentials.expiry_date)
+        : new Date(Date.now() + 3600 * 1000);
+
+      // Update the stored tokens
+      await prisma.googleCalendarAccount.update({
+        where: { id: account.id },
+        data: {
+          accessToken: credentials.access_token,
+          expiresAt,
+        },
+      });
+
+      return credentials.access_token;
+    } catch (error) {
+      console.error(`[DEBUG] Failed to refresh token:`, error);
+      throw error;
     }
-
-    const expiresAt = new Date(Date.now() + (credentials.expiry_date || 3600 * 1000));
-
-    // Update the stored tokens
-    await prisma.googleCalendarAccount.update({
-      where: { id: account.id },
-      data: {
-        accessToken: credentials.access_token,
-        expiresAt,
-      },
-    });
-
-    return credentials.access_token;
   }
 
   static async getValidAccessToken(accountId: string) {
@@ -142,9 +162,11 @@ export class GoogleCalendarService {
     const isExpired = account.expiresAt.getTime() - Date.now() < 5 * 60 * 1000;
 
     if (isExpired) {
+      console.log(`[DEBUG] Token expired, refreshing...`);
       return this.refreshAccessToken(account);
     }
 
+    console.log(`[DEBUG] Using existing access token`);
     return account.accessToken;
   }
 
@@ -162,6 +184,7 @@ export class GoogleCalendarService {
     const account = accounts[0];
     const accessToken = await this.getValidAccessToken(account.id);
 
+    const oauth2Client = this.createOAuth2Client();
     oauth2Client.setCredentials({ access_token: accessToken });
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
@@ -254,6 +277,7 @@ export class GoogleCalendarService {
     }
 
     const accessToken = await this.getValidAccessToken(accountId);
+    const oauth2Client = this.createOAuth2Client();
     oauth2Client.setCredentials({ access_token: accessToken });
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
@@ -313,10 +337,20 @@ export class GoogleCalendarService {
       where: { userId },
     });
 
+    console.log(`[DEBUG] Found ${accounts.length} Google Calendar accounts for user ${userId}`);
+
     const allEvents = [];
 
     for (const account of accounts) {
+      console.log(`[DEBUG] Processing account ${account.email}`);
+      console.log(`[DEBUG] Token expires at: ${account.expiresAt}`);
+      console.log(`[DEBUG] Current time: ${new Date()}`);
+      console.log(`[DEBUG] Token expired: ${account.expiresAt.getTime() - Date.now() < 5 * 60 * 1000}`);
+
       const accessToken = await this.getValidAccessToken(account.id);
+      console.log(`[DEBUG] Access token (first 20 chars): ${accessToken?.substring(0, 20)}...`);
+
+      const oauth2Client = this.createOAuth2Client();
       oauth2Client.setCredentials({ access_token: accessToken });
       const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
