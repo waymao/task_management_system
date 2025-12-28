@@ -5,10 +5,12 @@ import { ValidationError } from '../utils/errors.js';
 import type { ApiResponse } from '../types/index.js';
 
 export const assignmentsRoutes: FastifyPluginAsync = async (fastify) => {
-  const userId = process.env.DEFAULT_USER_ID || 'default-user-1';
+  // Add authentication to all routes
+  fastify.addHook('onRequest', fastify.authenticate);
 
   // Create assignment
   fastify.post('/', async (request, reply) => {
+    const userId = request.user.userId;
     const validationResult = createAssignmentSchema.safeParse(request.body);
 
     if (!validationResult.success) {
@@ -27,6 +29,7 @@ export const assignmentsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // List assignments
   fastify.get('/', async (request, reply) => {
+    const userId = request.user.userId;
     const validationResult = listAssignmentsSchema.safeParse(request.query);
 
     if (!validationResult.success) {
@@ -45,6 +48,7 @@ export const assignmentsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get unassigned tasks
   fastify.get('/unassigned', async (request, reply) => {
+    const userId = request.user.userId;
     const tasks = await assignmentService.getUnassignedTasks(userId);
 
     const response: ApiResponse = {
@@ -57,6 +61,7 @@ export const assignmentsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get assignment by ID
   fastify.get('/:id', async (request, reply) => {
+    const userId = request.user.userId;
     const { id } = request.params as { id: string };
 
     const assignment = await assignmentService.getAssignmentById(userId, id);
@@ -71,6 +76,7 @@ export const assignmentsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update assignment
   fastify.patch('/:id', async (request, reply) => {
+    const userId = request.user.userId;
     const { id } = request.params as { id: string };
 
     const validationResult = updateAssignmentSchema.safeParse(request.body);
@@ -91,7 +97,8 @@ export const assignmentsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete assignment
   fastify.delete('/:id', async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const userId = request.user.userId;
+    const { id} = request.params as { id: string };
 
     await assignmentService.deleteAssignment(userId, id);
 

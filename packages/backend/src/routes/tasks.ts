@@ -5,10 +5,12 @@ import { ValidationError } from '../utils/errors.js';
 import type { ApiResponse } from '../types/index.js';
 
 export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
-  const userId = process.env.DEFAULT_USER_ID || 'default-user-1';
+  // Add authentication to all routes
+  fastify.addHook('onRequest', fastify.authenticate);
 
   // Create task
   fastify.post('/', async (request, reply) => {
+    const userId = request.user.userId;
     const validationResult = createTaskSchema.safeParse(request.body);
 
     if (!validationResult.success) {
@@ -27,6 +29,7 @@ export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
 
   // List tasks
   fastify.get('/', async (request, reply) => {
+    const userId = request.user.userId;
     const validationResult = listTasksSchema.safeParse(request.query);
 
     if (!validationResult.success) {
@@ -45,6 +48,7 @@ export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get task by ID
   fastify.get('/:id', async (request, reply) => {
+    const userId = request.user.userId;
     const { id } = request.params as { id: string };
 
     const task = await taskService.getTaskById(userId, id);
@@ -59,6 +63,7 @@ export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Update task
   fastify.patch('/:id', async (request, reply) => {
+    const userId = request.user.userId;
     const { id } = request.params as { id: string };
 
     const validationResult = updateTaskSchema.safeParse(request.body);
@@ -79,6 +84,7 @@ export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Delete task
   fastify.delete('/:id', async (request, reply) => {
+    const userId = request.user.userId;
     const { id } = request.params as { id: string };
 
     await taskService.deleteTask(userId, id);
@@ -93,6 +99,7 @@ export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Complete task
   fastify.patch('/:id/complete', async (request, reply) => {
+    const userId = request.user.userId;
     const { id } = request.params as { id: string };
 
     const task = await taskService.completeTask(userId, id);
@@ -107,6 +114,7 @@ export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Cancel task
   fastify.patch('/:id/cancel', async (request, reply) => {
+    const userId = request.user.userId;
     const { id } = request.params as { id: string };
 
     const task = await taskService.cancelTask(userId, id);
@@ -121,6 +129,7 @@ export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Uncomplete task (mark as pending again)
   fastify.patch('/:id/uncomplete', async (request, reply) => {
+    const userId = request.user.userId;
     const { id } = request.params as { id: string };
 
     const task = await taskService.uncompleteTask(userId, id);
@@ -135,6 +144,7 @@ export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get trashed tasks
   fastify.get('/trash/list', async (request, reply) => {
+    const userId = request.user.userId;
     const tasks = await taskService.getTrashedTasks(userId);
 
     const response: ApiResponse = {
@@ -147,6 +157,7 @@ export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Restore task from trash
   fastify.patch('/:id/restore', async (request, reply) => {
+    const userId = request.user.userId;
     const { id } = request.params as { id: string };
 
     await taskService.restoreTask(userId, id);
@@ -161,6 +172,7 @@ export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Permanently delete task
   fastify.delete('/:id/permanently', async (request, reply) => {
+    const userId = request.user.userId;
     const { id } = request.params as { id: string };
 
     await taskService.permanentlyDeleteTask(userId, id);
@@ -175,6 +187,7 @@ export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Get follow-up tasks in a date range
   fastify.get('/followup/list', async (request, reply) => {
+    const userId = request.user.userId;
     const query = request.query as { startDate?: string; endDate?: string };
 
     if (!query.startDate || !query.endDate) {

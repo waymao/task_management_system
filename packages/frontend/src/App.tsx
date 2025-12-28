@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CapturePage } from './pages/CapturePage';
 import { TrashPage } from './pages/TrashPage';
@@ -23,6 +27,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -44,7 +49,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex gap-4">
+            <div className="hidden md:flex gap-4 items-center">
               <Link to="/dashboard" className={navLinkClass('/dashboard')}>
                 Dashboard
               </Link>
@@ -57,6 +62,14 @@ function Layout({ children }: { children: React.ReactNode }) {
               <Link to="/trash" className={navLinkClass('/trash')}>
                 Trash
               </Link>
+              <div className="border-l border-gray-300 h-6 mx-2"></div>
+              <span className="text-sm text-gray-600">{user?.email}</span>
+              <button
+                onClick={logout}
+                className="px-4 py-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                Logout
+              </button>
             </div>
 
             {/* Mobile Menu Button */}
@@ -122,6 +135,17 @@ function Layout({ children }: { children: React.ReactNode }) {
                 >
                   Trash
                 </Link>
+                <div className="border-t border-gray-300 my-2"></div>
+                <div className="px-4 py-2 text-sm text-gray-600">{user?.email}</div>
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="px-4 py-2 text-left text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  Logout
+                </button>
               </div>
             </div>
           )}
@@ -145,18 +169,75 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Layout>
+        <AuthProvider>
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/capture" element={<CapturePage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/assignments" element={<AssignmentBoardPage />} />
-            <Route path="/trash" element={<TrashPage />} />
+            {/* Public routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+
+            {/* Protected routes */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/dashboard" replace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <DashboardPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/capture"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <CapturePage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/calendar"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <CalendarPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/assignments"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <AssignmentBoardPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/trash"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <TrashPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
           </Routes>
-        </Layout>
+          <Toaster position="bottom-right" />
+        </AuthProvider>
       </BrowserRouter>
-      <Toaster position="bottom-right" />
     </QueryClientProvider>
   );
 }

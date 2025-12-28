@@ -1,9 +1,12 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import jwt from '@fastify/jwt';
 import { tasksRoutes } from './routes/tasks.js';
 import { healthRoutes } from './routes/health.js';
 import { assignmentsRoutes } from './routes/assignments.js';
 import { googleCalendarRoutes } from './routes/google-calendar.js';
+import { authRoutes } from './routes/auth.js';
+import { authenticate } from './middleware/auth.middleware.js';
 import { AppError } from './utils/errors.js';
 import type { ApiError } from './types/index.js';
 import { env } from 'process';
@@ -27,12 +30,12 @@ export async function buildApp() {
         ] : [
           env.PRODUCTION_CORS_ORIGIN
         ];
-      app.log.info(`CORS: Configured allowed origins: ${allowedOrigins.join(', ')}`);
 
       if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
         cb(null, true);
       } else {
         app.log.warn(`CORS: Blocked request from origin: ${origin}`);
+        app.log.info(`CORS: Configured allowed origins: ${allowedOrigins.join(', ')}`);
         cb(new Error('Not allowed by CORS'), false);
       }
     },
@@ -41,7 +44,16 @@ export async function buildApp() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
+  // Register JWT
+  await app.register(jwt, {
+    secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+  });
+
+  // Decorate with authenticate method
+  app.decorate('authenticate', authenticate);
+
   // Register routes
+  await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(tasksRoutes, { prefix: '/api/tasks' });
   await app.register(assignmentsRoutes, { prefix: '/api/assignments' });
   await app.register(googleCalendarRoutes, { prefix: '/api' });

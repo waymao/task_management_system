@@ -22,9 +22,18 @@ const updateCalendarPreferenceSchema = z.object({
 });
 
 export async function googleCalendarRoutes(app: FastifyInstance) {
+  // Add authentication to all routes except OAuth callback
+  app.addHook('onRequest', async (request, reply) => {
+    // Skip auth for OAuth callback
+    if (request.url.startsWith('/api/google/callback')) {
+      return;
+    }
+    await app.authenticate(request, reply);
+  });
+
   // Get auth URL to start OAuth flow
   app.get('/google/auth', async (request, reply) => {
-    const userId = process.env.DEFAULT_USER_ID || 'default-user-1';
+    const userId = request.user.userId;
     const authUrl = GoogleCalendarService.getAuthUrl(userId);
     return { authUrl };
   });
@@ -45,7 +54,7 @@ export async function googleCalendarRoutes(app: FastifyInstance) {
 
   // Get connected accounts
   app.get('/google/accounts', async (request, reply) => {
-    const userId = process.env.DEFAULT_USER_ID || 'default-user-1';
+    const userId = request.user.userId;
     const accounts = await GoogleCalendarService.getConnectedAccounts(userId);
     return { accounts };
   });
@@ -53,7 +62,7 @@ export async function googleCalendarRoutes(app: FastifyInstance) {
   // Disconnect account
   app.delete('/google/accounts/:accountId', async (request, reply) => {
     const { accountId } = accountIdParamSchema.parse(request.params);
-    const userId = process.env.DEFAULT_USER_ID || 'default-user-1';
+    const userId = request.user.userId;
 
     await GoogleCalendarService.disconnectAccount(accountId, userId);
     return { success: true };
@@ -62,7 +71,7 @@ export async function googleCalendarRoutes(app: FastifyInstance) {
   // Fetch events from Google Calendar (syncs with Google and updates DB)
   app.get('/google/events', async (request, reply) => {
     const { startDate, endDate } = eventsQuerySchema.parse(request.query);
-    const userId = process.env.DEFAULT_USER_ID || 'default-user-1';
+    const userId = request.user.userId;
 
     const events = await GoogleCalendarService.fetchEventsFromGoogle(
       userId,
@@ -76,7 +85,7 @@ export async function googleCalendarRoutes(app: FastifyInstance) {
   // Get cached events from database (faster, no API call to Google)
   app.get('/google/events/cached', async (request, reply) => {
     const { startDate, endDate } = eventsQuerySchema.parse(request.query);
-    const userId = process.env.DEFAULT_USER_ID || 'default-user-1';
+    const userId = request.user.userId;
 
     const events = await GoogleCalendarService.getStoredEvents(
       userId,
@@ -90,7 +99,7 @@ export async function googleCalendarRoutes(app: FastifyInstance) {
   // Manually trigger sync of an assignment
   app.post('/google/sync-assignment/:assignmentId', async (request, reply) => {
     const { assignmentId } = z.object({ assignmentId: z.string() }).parse(request.params);
-    const userId = process.env.DEFAULT_USER_ID || 'default-user-1';
+    const userId = request.user.userId;
 
     // Get assignment with task details
     const { prisma } = await import('../db/prisma.js');
