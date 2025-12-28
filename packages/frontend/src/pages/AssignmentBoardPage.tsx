@@ -1,0 +1,433 @@
+import { useState } from 'react';
+import { format, addWeeks, subWeeks, startOfWeek, addDays } from 'date-fns';
+import { useAssignments, useUnassignedTasks, useCreateAssignment, useDeleteAssignment } from '../hooks/useAssignments';
+import { useFollowUpTasks } from '../hooks/useTasks';
+import { Card } from '../components/common/Card';
+import { Button } from '../components/common/Button';
+import toast from 'react-hot-toast';
+import type { Task, TimeSlot } from '../types';
+
+type ViewMode = 'day' | '3days' | 'week';
+
+const TIME_SLOTS: TimeSlot[] = ['allday', 'morning', 'afternoon', 'evening'];
+const SLOT_LABELS: Record<TimeSlot, string> = {
+  allday: '📅 All Day / Follow-ups',
+  morning: '🌅 Morning',
+  afternoon: '☀️ Afternoon',
+  evening: '🌙 Evening',
+};
+
+export function AssignmentBoardPage() {
+  const [currentDay, setCurrentDay] = useState(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [draggedAssignmentId, setDraggedAssignmentId] = useState<string | null>(null);
+  const [dragOverSlot, setDragOverSlot] = useState<{ date: Date; slot: TimeSlot } | null>(null);
+  const [hoveredTask, setHoveredTask] = useState<{ task: Task; x: number; y: number } | null>(null);
+
+  // Calculate days based on view mode
+  const numDays = viewMode === 'day' ? 1 : viewMode === '3days' ? 3 : 7;
+  const startDay = viewMode === 'week' ? startOfWeek(currentDay) : currentDay;
+  const viewDays = Array.from({ length: numDays }, (_, i) => addDays(startDay, i));
+
+  const startDate = viewDays[0].toISOString();
+  const endDate = viewDays[viewDays.length - 1].toISOString();
+
+  const { data: assignments, isLoading } = useAssignments({ startDate, endDate });
+  const { data: unassignedTasks } = useUnassignedTasks();
+  const { data: followUpTasks } = useFollowUpTasks({ startDate, endDate });
+  const createAssignment = useCreateAssignment();
+  const deleteAssignment = useDeleteAssignment();
+
+  // Separate hooks for reschedule operation (no toasts)
+  const createAssignmentSilent = useCreateAssignment({ showToast: false });
+  const deleteAssignmentSilent = useDeleteAssignment({ showToast: false });
+
+  const handlePrevWeek = () => {
+    setCurrentDay(prev => {
+      if (viewMode === 'day') return addDays(prev, -1);
+      if (viewMode === '3days') return addDays(prev, -3);
+      return subWeeks(prev, 1);
+    });
+  };
+
+  const handleNextWeek = () => {
+    setCurrentDay(prev => {
+      if (viewMode === 'day') return addDays(prev, 1);
+      if (viewMode === '3days') return addDays(prev, 3);
+      return addWeeks(prev, 1);
+    });
+  };
+  const handleToday = () => setCurrentDay(new Date());
+
+  const getAssignmentsForSlot = (date: Date, slot: TimeSlot) => {
+    if (!assignments) return [];
+    const dateKey = format(date, 'yyyy-MM-dd');
+    return assignments.filter(a => {
+      const assignmentDate = format(new Date(a.date), 'yyyy-MM-dd');
+      return assignmentDate === dateKey && a.slot === slot;
+    });
+  };
+
+  const getFollowUpsForDate = (date: Date) => {
+    if (!followUpTasks) return [];
+    const dateKey = format(date, 'yyyy-MM-dd');
+    return followUpTasks.filter(task => {
+      if (!task.followUpDate) return false;
+      const followUpDate = format(new Date(task.followUpDate), 'yyyy-MM-dd');
+      return followUpDate === dateKey;
+    });
+  };
+
+  // Drag and Drop Handlers
+  const handleDragStart = (e: React.DragEvent, task: Task, assignmentId?: string) => {
+    setDraggedTask(task);
+    setDraggedAssignmentId(assignmentId || null);
+    setHoveredTask(null);  // Close tooltip when dragging starts
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', task.id);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTask(null);
+    setDraggedAssignmentId(null);
+    setDragOverSlot(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, date: Date, slot: TimeSlot) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverSlot({ date, slot });
+  };
+
+  const handleDragLeave = () => {
+    setDragOverSlot(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, date: Date, slot: TimeSlot) => {
+    e.preventDefault();
+    if (draggedTask) {
+      // If moving an existing assignment, delete the old one first
+      if (draggedAssignmentId) {
+        deleteAssignmentSilent.mutate(draggedAssignmentId, {
+          onSuccess: () => {
+            // Then create the new assignment
+            createAssignmentSilent.mutate({
+              taskId: draggedTask.id,
+              date: date.toISOString(),
+              slot,
+            }, {
+              onSuccess: () => {
+                toast.success('Task rescheduled');
+              }
+            });
+          }
+        });
+      } else {
+        // Just create a new assignment
+        createAssignment.mutate({
+          taskId: draggedTask.id,
+          date: date.toISOString(),
+          slot,
+        });
+      }
+    }
+    setDraggedTask(null);
+    setDraggedAssignmentId(null);
+    setDragOverSlot(null);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500 text-lg">Loading assignment board...</p>
+      </div>
+    );
+  }
+
+  const isDragOverThisSlot = (date: Date, slot: TimeSlot) => {
+    if (!dragOverSlot) return false;
+    return format(date, 'yyyy-MM-dd') === format(dragOverSlot.date, 'yyyy-MM-dd') && slot === dragOverSlot.slot;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Assignment Board</h1>
+        <p className="text-gray-600">
+          Drag tasks from below into time slots to schedule them
+        </p>
+      </div>
+
+      {/* Navigation and View Switcher */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={handlePrevWeek}>
+            ← Prev
+          </Button>
+          <Button size="sm" variant="ghost" onClick={handleToday}>
+            Today
+          </Button>
+          <Button size="sm" variant="ghost" onClick={handleNextWeek}>
+            Next →
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={viewMode === 'day' ? 'primary' : 'ghost'}
+            onClick={() => setViewMode('day')}
+          >
+            1 Day
+          </Button>
+          <Button
+            size="sm"
+            variant={viewMode === '3days' ? 'primary' : 'ghost'}
+            onClick={() => setViewMode('3days')}
+          >
+            3 Days
+          </Button>
+          <Button
+            size="sm"
+            variant={viewMode === 'week' ? 'primary' : 'ghost'}
+            onClick={() => setViewMode('week')}
+          >
+            Week
+          </Button>
+        </div>
+
+        <h2 className="text-xl font-semibold">
+          {format(viewDays[0], 'MMM d')} - {format(viewDays[viewDays.length - 1], 'MMM d, yyyy')}
+        </h2>
+      </div>
+
+      <div className={`grid gap-4 ${numDays === 1 ? 'grid-cols-4' : numDays === 3 ? 'grid-cols-4' : 'grid-cols-8'}`}>
+        {/* Time slot column */}
+        <div className="space-y-2">
+          <div className="h-16"></div>
+          {TIME_SLOTS.map(slot => (
+            <div key={slot} className={`h-32 flex justify-center font-medium text-gray-700`}>
+              {SLOT_LABELS[slot]}
+            </div>
+          ))}
+        </div>
+
+        {/* Days columns */}
+        {viewDays.map((day, dayIndex) => (
+          <div key={dayIndex} className={`space-y-2 ${numDays === 1 ? 'col-span-3' : ''}`}>
+            <div className="text-center h-16 flex flex-col items-center justify-center bg-white rounded-lg p-2">
+              <div className="text-xs text-gray-500">{format(day, 'EEE')}</div>
+              <div className="text-lg font-semibold">{format(day, 'd')}</div>
+            </div>
+
+            {TIME_SLOTS.map(slot => {
+              const slotAssignments = getAssignmentsForSlot(day, slot);
+              const followUps = slot === 'allday' ? getFollowUpsForDate(day) : [];
+              const isOver = isDragOverThisSlot(day, slot);
+
+              return (
+                <div
+                  key={slot}
+                  className={`
+                    h-32 p-2 rounded-lg border-2 transition-all
+                    ${isOver ? 'border-primary-500 bg-primary-50 border-dashed' : 'border-gray-200 bg-white'}
+                    hover:border-gray-300
+                  `}
+                  onDragOver={(e) => handleDragOver(e, day, slot)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, day, slot)}
+                >
+                  <div className="space-y-1 h-full overflow-y-auto">
+                    {/* Regular assignments (draggable) */}
+                    {slotAssignments.map(assignment => (
+                      <div
+                        key={assignment.id}
+                        draggable
+                        onDragStart={(e) => assignment.task && handleDragStart(e, assignment.task, assignment.id)}
+                        onDragEnd={handleDragEnd}
+                        onMouseEnter={(e) => {
+                          if (assignment.task) {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const tooltipWidth = 384; // max-w-sm is roughly 384px
+                            const tooltipHeight = 200; // estimated height
+                            const padding = 10;
+
+                            // Calculate horizontal position (prefer right, but use left if near edge)
+                            const spaceOnRight = window.innerWidth - rect.right;
+                            const x = spaceOnRight > tooltipWidth + padding
+                              ? rect.right + padding  // Show on right
+                              : rect.left - padding;  // Show on left
+
+                            // Calculate vertical position (adjust if near bottom)
+                            const spaceBelow = window.innerHeight - rect.top;
+                            const y = spaceBelow > tooltipHeight
+                              ? rect.top  // Align with top
+                              : Math.max(padding, rect.bottom - tooltipHeight);  // Adjust upward
+
+                            setHoveredTask({
+                              task: assignment.task,
+                              x: Math.max(padding, x),  // Don't go off left edge
+                              y
+                            });
+                          }
+                        }}
+                        onMouseLeave={() => setHoveredTask(null)}
+                        className={`
+                          text-xs p-1.5 rounded group relative cursor-move transition-all
+                          ${assignment.task?.priority === 'high' ? 'bg-red-100 text-red-800' : ''}
+                          ${assignment.task?.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : ''}
+                          ${assignment.task?.priority === 'low' ? 'bg-green-100 text-green-800' : ''}
+                          ${draggedTask?.id === assignment.task?.id && draggedAssignmentId === assignment.id ? 'opacity-50 scale-95' : 'hover:shadow-md'}
+                        `}
+                      >
+                        <div className="truncate font-medium">{assignment.task?.title}</div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setHoveredTask(null);  // Close tooltip when delete is clicked
+                            deleteAssignment.mutate(assignment.id);
+                          }}
+                          className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Follow-up reminders (non-draggable, static) */}
+                    {followUps.map(task => (
+                      <div
+                        key={`followup-${task.id}`}
+                        onMouseEnter={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const tooltipWidth = 384;
+                          const tooltipHeight = 200;
+                          const padding = 10;
+
+                          const spaceOnRight = window.innerWidth - rect.right;
+                          const x = spaceOnRight > tooltipWidth + padding
+                            ? rect.right + padding
+                            : rect.left - padding;
+
+                          const spaceBelow = window.innerHeight - rect.top;
+                          const y = spaceBelow > tooltipHeight
+                            ? rect.top
+                            : Math.max(padding, rect.bottom - tooltipHeight);
+
+                          setHoveredTask({
+                            task,
+                            x: Math.max(padding, x),
+                            y
+                          });
+                        }}
+                        onMouseLeave={() => setHoveredTask(null)}
+                        className="text-xs p-1.5 rounded relative bg-blue-50 border border-blue-200 text-blue-800"
+                      >
+                        <div className="truncate font-medium">🔔 {task.title}</div>
+                        <div className="text-xs text-blue-600 mt-0.5">
+                          Follow-up {task.delegatedTo ? `with ${task.delegatedTo}` : ''}
+                        </div>
+                      </div>
+                    ))}
+
+                    {isOver && (
+                      <div className="text-xs text-primary-600 italic">Drop here</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* Unassigned Tasks */}
+      <Card>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Unassigned Tasks ({ unassignedTasks?.filter(task => task.type !== 'delegated')?.length || 0})
+          <span className="text-sm font-normal text-gray-500 ml-2">
+            (Drag to schedule)
+          </span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+          {unassignedTasks?.filter(task => task.type !== 'delegated')?.map(task => (
+            <div
+              key={task.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, task)}
+              onDragEnd={handleDragEnd}
+              className={`
+                p-3 rounded-lg cursor-move transition-all
+                ${task.priority === 'high' ? 'bg-red-50 border border-red-200 hover:bg-red-100' : ''}
+                ${task.priority === 'medium' ? 'bg-yellow-50 border border-yellow-200 hover:bg-yellow-100' : ''}
+                ${task.priority === 'low' ? 'bg-green-50 border border-green-200 hover:bg-green-100' : ''}
+                ${draggedTask?.id === task.id ? 'opacity-50 scale-95' : 'hover:shadow-md'}
+              `}
+            >
+              <div className="font-medium text-sm truncate">{task.title}</div>
+              {task.dueDate && (
+                <div className="text-xs text-gray-600 mt-1">
+                  Due: {format(new Date(task.dueDate), 'MMM d')}
+                </div>
+              )}
+              <div className="text-xs text-gray-400 mt-1">
+                ✋ Drag to assign
+              </div>
+            </div>
+          ))}
+          {(!unassignedTasks || unassignedTasks.length === 0) && (
+            <div className="col-span-full text-center py-8 text-gray-500">
+              All tasks are assigned! Create new tasks in the Capture page.
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Hover Tooltip */}
+      {hoveredTask && (
+        <div
+          className="fixed z-50 bg-white shadow-lg rounded-lg p-4 border border-gray-200 max-w-sm"
+          style={{
+            left: `${hoveredTask.x}px`,
+            top: `${hoveredTask.y}px`,
+          }}
+        >
+          <div className="space-y-2">
+            <div className="font-semibold text-gray-900">{hoveredTask.task.title}</div>
+            {hoveredTask.task.description && (
+              <div className="text-sm text-gray-600">{hoveredTask.task.description}</div>
+            )}
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className={`px-2 py-1 rounded ${
+                hoveredTask.task.priority === 'high' ? 'bg-red-100 text-red-800' :
+                hoveredTask.task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-green-100 text-green-800'
+              }`}>
+                {hoveredTask.task.priority}
+              </span>
+              <span className="px-2 py-1 rounded bg-gray-100 text-gray-800">
+                {hoveredTask.task.type}
+              </span>
+            </div>
+            {hoveredTask.task.dueDate && (
+              <div className="text-sm text-gray-600">
+                Due: {format(new Date(hoveredTask.task.dueDate), 'MMM d, yyyy')}
+              </div>
+            )}
+            {hoveredTask.task.followUpDate && (
+              <div className="text-sm text-gray-600">
+                Follow-up: {format(new Date(hoveredTask.task.followUpDate), 'MMM d, yyyy')}
+              </div>
+            )}
+            {hoveredTask.task.delegatedTo && (
+              <div className="text-sm text-gray-600">
+                Delegated to: {hoveredTask.task.delegatedTo}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

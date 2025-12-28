@@ -54,3 +54,27 @@ export interface ApiError {
     details?: unknown;
   };
 }
+
+export type TimeSlot = 'allday' | 'morning' | 'afternoon' | 'evening';
+
+export interface Assignment {
+  id: string;
+  taskId: string;
+  userId: string;
+  date: string;
+  slot: TimeSlot;
+  createdAt: string;
+  updatedAt: string;
+  task?: Task;
+}
+
+export interface CreateAssignmentInput {
+  taskId: string;
+  date: string;
+  slot: TimeSlot;
+}
+
+export interface UpdateAssignmentInput {
+  date?: string;
+  slot?: TimeSlot;
+}

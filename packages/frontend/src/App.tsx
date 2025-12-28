@@ -4,6 +4,8 @@ import { Toaster } from 'react-hot-toast';
 import { DashboardPage } from './pages/DashboardPage';
 import { CapturePage } from './pages/CapturePage';
 import { TrashPage } from './pages/TrashPage';
+import { CalendarPage } from './pages/CalendarPage';
+import { AssignmentBoardPage } from './pages/AssignmentBoardPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,6 +40,18 @@ function Layout({ children }: { children: React.ReactNode }) {
                 Capture
               </Link>
               <Link
+                to="/calendar"
+                className="px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Calendar
+              </Link>
+              <Link
+                to="/assignments"
+                className="px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Assignments
+              </Link>
+              <Link
                 to="/trash"
                 className="px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
@@ -64,6 +78,8 @@ function App() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/capture" element={<CapturePage />} />
+            <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/assignments" element={<AssignmentBoardPage />} />
             <Route path="/trash" element={<TrashPage />} />
           </Routes>
         </Layout>

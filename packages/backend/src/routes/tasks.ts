@@ -172,4 +172,22 @@ export const tasksRoutes: FastifyPluginAsync = async (fastify) => {
 
     return reply.send(response);
   });
+
+  // Get follow-up tasks in a date range
+  fastify.get('/followup/list', async (request, reply) => {
+    const query = request.query as { startDate?: string; endDate?: string };
+
+    if (!query.startDate || !query.endDate) {
+      throw new ValidationError('startDate and endDate are required');
+    }
+
+    const tasks = await taskService.getFollowUpTasks(userId, query.startDate, query.endDate);
+
+    const response: ApiResponse = {
+      success: true,
+      data: tasks,
+    };
+
+    return reply.send(response);
+  });
 };

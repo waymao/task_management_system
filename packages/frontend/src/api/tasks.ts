@@ -62,4 +62,11 @@ export const tasksApi = {
   permanentDelete: async (id: string): Promise<void> => {
     await apiClient.delete(`/tasks/${id}/permanently`);
   },
+
+  listFollowUp: async (startDate: string, endDate: string): Promise<Task[]> => {
+    const response = await apiClient.get<{ success: true; data: Task[] }>('/tasks/followup/list', {
+      params: { startDate, endDate },
+    });
+    return unwrapResponse(response);
+  },
 };

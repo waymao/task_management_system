@@ -116,3 +116,15 @@ export function usePermanentDeleteTask() {
     },
   });
 }
+
+interface UseFollowUpTasksParams {
+  startDate: string;
+  endDate: string;
+}
+
+export function useFollowUpTasks(params: UseFollowUpTasksParams) {
+  return useQuery({
+    queryKey: ['tasks', 'followup', params],
+    queryFn: () => tasksApi.listFollowUp(params.startDate, params.endDate),
+  });
+}

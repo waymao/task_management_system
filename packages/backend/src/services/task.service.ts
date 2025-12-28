@@ -171,6 +171,28 @@ export class TaskService {
       where: { id: taskId },
     });
   }
+
+  // Get delegated tasks with follow-up dates in a date range
+  async getFollowUpTasks(userId: string, startDate: string, endDate: string) {
+    const tasks = await prisma.task.findMany({
+      where: {
+        userId,
+        type: 'delegated',
+        status: 'pending',
+        deletedAt: null,
+        followUpDate: {
+          gte: new Date(startDate),
+          lte: new Date(endDate),
+        },
+      },
+      orderBy: [
+        { followUpDate: 'asc' },
+        { createdAt: 'asc' },
+      ],
+    });
+
+    return tasks;
+  }
 }
 
 export const taskService = new TaskService();
