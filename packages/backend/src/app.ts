@@ -17,20 +17,11 @@ export async function buildApp() {
 
   // Register CORS
   await app.register(cors, {
-    origin: (origin, cb) => {
-      // Allow requests from localhost on any port in development
-      const allowedOrigins = [
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        'http://localhost:3000',
-      ];
-
-      if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-        cb(null, true);
-      } else {
-        cb(new Error('Not allowed by CORS'), false);
-      }
-    },
+    origin: [
+      /^http:\/\/localhost:5173$/,
+      /^http:\/\/127\.0\.0\.1:5173$/,
+      /^http:\/\/localhost:3000$/,
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
