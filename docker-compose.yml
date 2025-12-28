@@ -10,7 +10,7 @@ services:
       - "3000:3000"
     environment:
       # Database
-      DATABASE_URL: "file:/app/data/prod.db"
+      DATABASE_URL: ${DATABASE_URL}
       PORT: 3000
       NODE_ENV: production
 
