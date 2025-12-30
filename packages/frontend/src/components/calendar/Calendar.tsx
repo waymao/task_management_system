@@ -24,10 +24,34 @@ interface CalendarProps {
 type DisplayMode = 'list' | 'timeline';
 
 export function Calendar({ tasks, googleEvents, onDateClick, onTaskClick }: CalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<CalendarView>('month');
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('timeline');
+  const [currentDate, setCurrentDate] = useState(() => {
+    const savedDate = localStorage.getItem('calendarCurrentDate');
+    return savedDate ? new Date(savedDate) : new Date();
+  });
+  const [view, setView] = useState<CalendarView>(() => {
+    const savedView = localStorage.getItem('calendarView');
+    return (savedView as CalendarView) || 'month';
+  });
+  const [displayMode, setDisplayMode] = useState<DisplayMode>(() => {
+    const savedMode = localStorage.getItem('calendarDisplayMode');
+    return (savedMode as DisplayMode) || 'timeline';
+  });
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Save current date to localStorage
+  useEffect(() => {
+    localStorage.setItem('calendarCurrentDate', currentDate.toISOString());
+  }, [currentDate]);
+
+  // Save view to localStorage
+  useEffect(() => {
+    localStorage.setItem('calendarView', view);
+  }, [view]);
+
+  // Save display mode to localStorage
+  useEffect(() => {
+    localStorage.setItem('calendarDisplayMode', displayMode);
+  }, [displayMode]);
 
   // Update current time every minute
   useEffect(() => {
