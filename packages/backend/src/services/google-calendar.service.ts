@@ -415,13 +415,13 @@ export class GoogleCalendarService {
               let endTime: Date;
 
               if (isAllDay) {
-                // For all-day events, use the date at midnight local time
+                // For all-day events, use the date at midnight UTC
                 // event.start.date is in format "YYYY-MM-DD"
                 const [startYear, startMonth, startDay] = event.start.date!.split('-').map(Number);
-                startTime = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);
+                startTime = new Date(Date.UTC(startYear, startMonth - 1, startDay, 0, 0, 0, 0));
 
                 const [endYear, endMonth, endDay] = event.end.date!.split('-').map(Number);
-                endTime = new Date(endYear, endMonth - 1, endDay, 0, 0, 0, 0);
+                endTime = new Date(Date.UTC(endYear, endMonth - 1, endDay, 0, 0, 0, 0));
               } else {
                 // For timed events, use the dateTime as-is
                 startTime = new Date(event.start.dateTime!);

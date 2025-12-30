@@ -1,4 +1,5 @@
 import { format, isToday, parseISO, isSameDay } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import type { Task } from '../../types';
 
 interface GoogleCalendarEvent {
@@ -125,7 +126,13 @@ export function TimelineView({ days, tasksByDate, googleEvents, onTaskClick, cur
           const isDayToday = isToday(day);
 
           // Separate all-day items from timed items
-          const allDayEvents = googleEvents?.filter(event => event.isAllDay && isSameDay(parseISO(event.startTime), day)) || [];
+          const allDayEvents = googleEvents?.filter(event => {
+            if (!event.isAllDay) return false;
+            // Compare dates in UTC to avoid timezone shift for all-day events
+            const eventDateUTC = formatInTimeZone(new Date(event.startTime), 'UTC', 'yyyy-MM-dd');
+            const dayDateUTC = formatInTimeZone(day, 'UTC', 'yyyy-MM-dd');
+            return eventDateUTC === dayDateUTC;
+          }) || [];
           const allDayTasks = dayTasks.filter(task => !task.id.startsWith('gcal-') && isTaskAllDay(task));
 
           return (

@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 
 interface GoogleCalendarEvent {
   id: string;
@@ -57,11 +58,11 @@ export function CalendarEventModal({ event, onClose }: CalendarEventModalProps) 
                   <>
                     <div className="font-medium text-gray-900">All-day event</div>
                     <div className="text-sm text-gray-700 mt-1">
-                      {format(startDate, 'EEEE, MMMM d, yyyy')}
+                      {formatInTimeZone(startDate, 'UTC', 'EEEE, MMMM d, yyyy')}
                     </div>
                     {startDate.toDateString() !== endDate.toDateString() && (
                       <div className="text-xs text-gray-600 mt-1">
-                        Until: {format(new Date(endDate.getTime() - 1), 'EEEE, MMMM d, yyyy')}
+                        Until: {formatInTimeZone(new Date(endDate.getTime() - 1), 'UTC', 'EEEE, MMMM d, yyyy')}
                       </div>
                     )}
                   </>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, addWeeks, subWeeks, startOfWeek, addDays, startOfDay, endOfDay, isToday } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { useAssignments, useUnassignedTasks, useCreateAssignment, useDeleteAssignment } from '../hooks/useAssignments';
 import { useFollowUpTasks, useCompleteTask, useUncompleteTask } from '../hooks/useTasks';
 import { useGoogleCalendarEvents, useRefreshGoogleCalendarEvents } from '../hooks/useGoogleCalendar';
@@ -142,7 +143,12 @@ export function AssignmentBoardPage() {
   };
 
   // Determine which slot a Google Calendar event belongs to
-  const getEventSlot = (startTime: string, endTime: string): TimeSlot => {
+  const getEventSlot = (startTime: string, endTime: string, isAllDay?: boolean): TimeSlot => {
+    // Check isAllDay flag first (most reliable indicator)
+    if (isAllDay) {
+      return 'allday';
+    }
+
     const start = new Date(startTime);
     const end = new Date(endTime);
     const startHour = start.getHours();
@@ -163,10 +169,13 @@ export function AssignmentBoardPage() {
     const dateKey = format(date, 'yyyy-MM-dd');
 
     return googleEvents.filter(event => {
-      const eventDate = format(new Date(event.startTime), 'yyyy-MM-dd');
+      // For all-day events, format in UTC to avoid timezone shift
+      const eventDate = event.isAllDay
+        ? formatInTimeZone(new Date(event.startTime), 'UTC', 'yyyy-MM-dd')
+        : format(new Date(event.startTime), 'yyyy-MM-dd');
       if (eventDate !== dateKey) return false;
 
-      const eventSlot = getEventSlot(event.startTime, event.endTime);
+      const eventSlot = getEventSlot(event.startTime, event.endTime, event.isAllDay);
       return eventSlot === slot;
     });
   };
