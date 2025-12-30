@@ -1,13 +1,11 @@
 import { useTasks } from '../hooks/useTasks';
 import { SummaryCards } from '../components/dashboard/SummaryCards';
 import { CurrentFocusTasks } from '../components/dashboard/CurrentFocusTasks';
-import { TodosByDate } from '../components/dashboard/TodosByDate';
 import { FollowUpReminders } from '../components/dashboard/FollowUpReminders';
-import { CompletedTasksList } from '../components/dashboard/CompletedTasksList';
 
 export function DashboardPage() {
   const { data: pendingTasks, isLoading: isLoadingPending, error: errorPending } = useTasks({ status: 'pending' });
-  const { data: completedTasks, isLoading: isLoadingCompleted } = useTasks({ status: 'completed' });
+  const { isLoading: isLoadingCompleted } = useTasks({ status: 'completed' });
 
   const isLoading = isLoadingPending || isLoadingCompleted;
   const error = errorPending;
@@ -29,7 +27,6 @@ export function DashboardPage() {
   }
 
   const pending = pendingTasks || [];
-  const completed = completedTasks || [];
 
   return (
     <div className="space-y-4">
@@ -44,11 +41,8 @@ export function DashboardPage() {
 
       <CurrentFocusTasks tasks={pending} />
 
-      {/* <TodosByDate tasks={pending} /> */}
-
       <FollowUpReminders tasks={pending} />
 
-      {/* <CompletedTasksList tasks={completed} /> */}
     </div>
   );
 }
