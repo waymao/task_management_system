@@ -147,9 +147,6 @@ export function CurrentFocusTasks({ tasks }: CurrentFocusTasksProps) {
               <span>📍</span>
               {SLOT_LABELS[currentSlot]} Tasks ({currentBlockTasks.length})
             </h3>
-            <p className="text-xs text-gray-600 mb-2">
-              Tasks scheduled for this time block
-            </p>
             <div className="space-y-1.5">
               {currentBlockTasks.map((task) => (
                 <TaskItem key={task.id} task={task} onClick={() => setSelectedTask(task)} />

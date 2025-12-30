@@ -44,11 +44,11 @@ export function DashboardPage() {
 
       <CurrentFocusTasks tasks={pending} />
 
-      <TodosByDate tasks={pending} />
+      {/* <TodosByDate tasks={pending} /> */}
 
       <FollowUpReminders tasks={pending} />
 
-      <CompletedTasksList tasks={completed} />
+      {/* <CompletedTasksList tasks={completed} /> */}
     </div>
   );
 }

@@ -127,8 +127,8 @@ export function CalendarPage() {
     );
   };
 
-  // Merge tasks with Google Calendar events (convert events to task-like objects)
-  // IMPORTANT: This must be before any conditional returns to follow Rules of Hooks
+  // For month/list views, merge tasks with Google Calendar events
+  // For timeline view, pass them separately to preserve event duration
   const allTasks = useMemo(() => {
     const taskList = tasks || [];
 
@@ -136,7 +136,7 @@ export function CalendarPage() {
       return taskList;
     }
 
-    // Convert Google Calendar events to task-like objects
+    // Convert Google Calendar events to task-like objects for list/month views
     const eventTasks: Task[] = googleEvents.map(event => ({
       id: `gcal-${event.id}`,
       title: `📅 ${event.title}`,
@@ -314,6 +314,7 @@ export function CalendarPage() {
 
       <Calendar
         tasks={allTasks}
+        googleEvents={googleEvents}
         onTaskClick={setSelectedTask}
       />
 

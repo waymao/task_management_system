@@ -2,17 +2,31 @@ import { useState, useEffect } from 'react';
 import { format, isToday } from 'date-fns';
 import { Button } from '../common/Button';
 import { CalendarView, getMonthDays, getWeekDays, navigateCalendar, formatCalendarTitle, groupTasksByDate } from '../../utils/calendar';
+import { TimelineView } from './TimelineView';
 import type { Task } from '../../types';
+
+interface GoogleCalendarEvent {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  isAllDay: boolean;
+  accountEmail: string;
+}
 
 interface CalendarProps {
   tasks: Task[];
+  googleEvents?: GoogleCalendarEvent[];
   onDateClick?: (date: Date) => void;
   onTaskClick?: (task: Task) => void;
 }
 
-export function Calendar({ tasks, onDateClick, onTaskClick }: CalendarProps) {
+type DisplayMode = 'list' | 'timeline';
+
+export function Calendar({ tasks, googleEvents, onDateClick, onTaskClick }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('month');
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('timeline');
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Update current time every minute
@@ -100,6 +114,18 @@ export function Calendar({ tasks, onDateClick, onTaskClick }: CalendarProps) {
   const renderWeekView = () => {
     const days = getWeekDays(currentDate);
 
+    if (displayMode === 'timeline') {
+      return (
+        <TimelineView
+          days={days.map(d => d.date)}
+          tasksByDate={tasksByDate}
+          googleEvents={googleEvents}
+          onTaskClick={onTaskClick}
+          currentTime={currentTime}
+        />
+      );
+    }
+
     return (
       <div className="grid grid-cols-7 gap-4">
         {days.map((day, index) => {
@@ -159,6 +185,20 @@ export function Calendar({ tasks, onDateClick, onTaskClick }: CalendarProps) {
     const dateKey = format(currentDate, 'yyyy-MM-dd');
     const dayTasks = tasksByDate.get(dateKey) || [];
     const isTodayView = isToday(currentDate);
+
+    if (displayMode === 'timeline') {
+      return (
+        <div className="max-w-4xl mx-auto">
+          <TimelineView
+            days={[currentDate]}
+            tasksByDate={tasksByDate}
+            googleEvents={googleEvents}
+            onTaskClick={onTaskClick}
+            currentTime={currentTime}
+          />
+        </div>
+      );
+    }
 
     return (
       <div className="max-w-2xl mx-auto">
@@ -260,6 +300,26 @@ export function Calendar({ tasks, onDateClick, onTaskClick }: CalendarProps) {
           </Button>
         </div>
       </div>
+
+      {/* Display mode toggle (only show for week and day views) */}
+      {(view === 'week' || view === 'day') && (
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            size="sm"
+            variant={displayMode === 'list' ? 'primary' : 'ghost'}
+            onClick={() => setDisplayMode('list')}
+          >
+            List View
+          </Button>
+          <Button
+            size="sm"
+            variant={displayMode === 'timeline' ? 'primary' : 'ghost'}
+            onClick={() => setDisplayMode('timeline')}
+          >
+            Timeline View
+          </Button>
+        </div>
+      )}
 
       {view === 'month' && renderMonthView()}
       {view === 'week' && renderWeekView()}
