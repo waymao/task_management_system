@@ -635,11 +635,17 @@ export function AssignmentBoardPage() {
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-700 bg-purple-50 p-2 rounded">
-              <span className="font-medium">🕒</span>
+              <span className="font-medium">{hoveredEvent.event.isAllDay ? '📅' : '🕒'}</span>
               <div>
-                <div>{format(new Date(hoveredEvent.event.startTime), 'MMM d, yyyy')}</div>
+                <div>
+                  {hoveredEvent.event.isAllDay
+                    ? formatInTimeZone(new Date(hoveredEvent.event.startTime), 'UTC', 'MMM d, yyyy')
+                    : format(new Date(hoveredEvent.event.startTime), 'MMM d, yyyy')}
+                </div>
                 <div className="text-xs text-gray-600">
-                  {format(new Date(hoveredEvent.event.startTime), 'h:mm a')} - {format(new Date(hoveredEvent.event.endTime), 'h:mm a')}
+                  {hoveredEvent.event.isAllDay
+                    ? 'All day'
+                    : `${format(new Date(hoveredEvent.event.startTime), 'h:mm a')} - ${format(new Date(hoveredEvent.event.endTime), 'h:mm a')}`}
                 </div>
               </div>
             </div>

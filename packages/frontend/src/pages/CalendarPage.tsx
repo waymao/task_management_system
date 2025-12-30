@@ -5,6 +5,7 @@ import { useGoogleCalendarAuth, useGoogleCalendarAccounts, useDisconnectGoogleCa
 import { Button } from '../components/common/Button';
 import { Card } from '../components/common/Card';
 import { TaskDetailModal } from '../components/common/TaskDetailModal';
+import { formatInTimeZone } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import type { Task } from '../types';
 
@@ -144,7 +145,10 @@ export function CalendarPage() {
       type: 'immediate' as const,
       status: 'pending' as const,
       priority: 'low' as const,
-      dueDate: event.startTime,
+      // For all-day events, extract the UTC date and create a local Date for correct grouping
+      dueDate: event.isAllDay
+        ? new Date(formatInTimeZone(new Date(event.startTime), 'UTC', 'yyyy-MM-dd')).toISOString()
+        : event.startTime,
       userId: '',
       createdAt: event.startTime,
       updatedAt: event.startTime,
