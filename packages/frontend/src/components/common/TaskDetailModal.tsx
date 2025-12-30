@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Textarea } from './Textarea';
 import { Select } from './Select';
-import { useUpdateTask, useCompleteTask, useUncompleteTask, useDeleteTask } from '../../hooks/useTasks';
+import { useTask, useUpdateTask, useCompleteTask, useUncompleteTask, useDeleteTask } from '../../hooks/useTasks';
 import type { Task, TaskPriority } from '../../types';
 
 interface TaskDetailModalProps {
@@ -13,7 +13,11 @@ interface TaskDetailModalProps {
   readOnly?: boolean;
 }
 
-export function TaskDetailModal({ task, onClose, readOnly = false }: TaskDetailModalProps) {
+export function TaskDetailModal({ task: initialTask, onClose, readOnly = false }: TaskDetailModalProps) {
+  // Fetch the latest task data from cache to stay in sync with optimistic updates
+  const { data: latestTask } = useTask(initialTask.id);
+  const task = latestTask || initialTask;
+
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState({
     title: task.title,
@@ -23,6 +27,20 @@ export function TaskDetailModal({ task, onClose, readOnly = false }: TaskDetailM
     delegatedTo: task.delegatedTo || '',
     followUpDate: task.followUpDate ? format(new Date(task.followUpDate), 'yyyy-MM-dd') : '',
   });
+
+  // Update editedTask when task changes (from optimistic updates)
+  useEffect(() => {
+    if (!isEditing) {
+      setEditedTask({
+        title: task.title,
+        description: task.description || '',
+        priority: task.priority,
+        dueDate: task.dueDate ? format(new Date(task.dueDate), 'yyyy-MM-dd') : '',
+        delegatedTo: task.delegatedTo || '',
+        followUpDate: task.followUpDate ? format(new Date(task.followUpDate), 'yyyy-MM-dd') : '',
+      });
+    }
+  }, [task, isEditing]);
 
   const updateTask = useUpdateTask();
   const completeTask = useCompleteTask();
@@ -46,6 +64,9 @@ export function TaskDetailModal({ task, onClose, readOnly = false }: TaskDetailM
         onSuccess: () => {
           setIsEditing(false);
         },
+        onError: (error) => {
+          console.error(`Error updating task: ${error.message}`);
+        }
       }
     );
   };
