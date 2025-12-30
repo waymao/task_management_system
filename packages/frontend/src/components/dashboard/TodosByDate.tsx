@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { TaskItem } from './TaskItem';
+import { TaskDetailModal } from '../common/TaskDetailModal';
 import type { Task } from '../../types';
 
 interface TodosByDateProps {
@@ -6,6 +8,7 @@ interface TodosByDateProps {
 }
 
 export function TodosByDate({ tasks }: TodosByDateProps) {
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const todoTasks = tasks
     .filter((t) => t.type === 'todo')
     .sort((a, b) => {
@@ -16,12 +19,12 @@ export function TodosByDate({ tasks }: TodosByDateProps) {
 
   if (todoTasks.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <span className="text-2xl">📅</span>
+      <div className="bg-white rounded-lg shadow p-4">
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          <span className="text-xl">📅</span>
           Todos by Date
         </h2>
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-sm text-gray-500 text-center py-6">
           No scheduled todos yet. Start planning your tasks!
         </p>
       </div>
@@ -29,19 +32,25 @@ export function TodosByDate({ tasks }: TodosByDateProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-        <span className="text-2xl">📅</span>
-        Todos by Date ({todoTasks.length})
-      </h2>
-      <p className="text-sm text-gray-600 mb-4">
-        Tasks with specific due dates
-      </p>
-      <div className="space-y-2">
-        {todoTasks.map((task) => (
-          <TaskItem key={task.id} task={task} />
-        ))}
+    <>
+      <div className="bg-white rounded-lg shadow p-4">
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          <span className="text-xl">📅</span>
+          Todos by Date ({todoTasks.length})
+        </h2>
+        <p className="text-xs text-gray-600 mb-2">
+          Tasks with specific due dates
+        </p>
+        <div className="space-y-1.5">
+          {todoTasks.map((task) => (
+            <TaskItem key={task.id} task={task} onClick={() => setSelectedTask(task)} />
+          ))}
+        </div>
       </div>
-    </div>
+
+      {selectedTask && (
+        <TaskDetailModal task={selectedTask} onClose={() => setSelectedTask(null)} />
+      )}
+    </>
   );
 }

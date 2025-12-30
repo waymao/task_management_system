@@ -30,8 +30,16 @@ const getCurrentTimeSlot = (): TimeSlot => {
 };
 
 export function AssignmentBoardPage() {
-  const [currentDay, setCurrentDay] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [currentDay, setCurrentDay] = useState(() => {
+    // Load saved current day from localStorage, default to today
+    const savedDay = localStorage.getItem('assignmentCurrentDay');
+    return savedDay ? new Date(savedDay) : new Date();
+  });
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    // Load saved view mode from localStorage, default to 'week'
+    const savedViewMode = localStorage.getItem('assignmentViewMode');
+    return (savedViewMode as ViewMode) || 'week';
+  });
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [draggedAssignmentId, setDraggedAssignmentId] = useState<string | null>(null);
   const [dragOverSlot, setDragOverSlot] = useState<{ date: Date; slot: TimeSlot } | null>(null);
@@ -49,6 +57,16 @@ export function AssignmentBoardPage() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Save view mode to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('assignmentViewMode', viewMode);
+  }, [viewMode]);
+
+  // Save current day to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('assignmentCurrentDay', currentDay.toISOString());
+  }, [currentDay]);
 
   // Calculate days based on view mode
   const numDays = viewMode === 'day' ? 1 : viewMode === '3days' ? 3 : 7;
@@ -76,7 +94,7 @@ export function AssignmentBoardPage() {
   const handlePrevWeek = () => {
     setCurrentDay(prev => {
       if (viewMode === 'day') return addDays(prev, -1);
-      if (viewMode === '3days') return addDays(prev, -3);
+      if (viewMode === '3days') return addDays(prev, -1);
       return subWeeks(prev, 1);
     });
   };
@@ -84,7 +102,7 @@ export function AssignmentBoardPage() {
   const handleNextWeek = () => {
     setCurrentDay(prev => {
       if (viewMode === 'day') return addDays(prev, 1);
-      if (viewMode === '3days') return addDays(prev, 3);
+      if (viewMode === '3days') return addDays(prev, 1);
       return addWeeks(prev, 1);
     });
   };

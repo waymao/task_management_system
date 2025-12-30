@@ -1,6 +1,16 @@
 import { prisma } from '../db/prisma.js';
 import { NotFoundError } from '../utils/errors.js';
 import type { CreateTaskInput, UpdateTaskInput, ListTasksQuery } from '../schemas/task.schema.js';
+import { assignmentService } from './assignment.service.js';
+
+// Helper function to get current time slot based on hour
+function getCurrentTimeSlot(): 'allday' | 'morning' | 'afternoon' | 'evening' {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 18) return 'afternoon';
+  if (hour >= 18 && hour < 24) return 'evening';
+  return 'allday';
+}
 
 export class TaskService {
   async createTask(userId: string, data: CreateTaskInput) {
@@ -17,6 +27,25 @@ export class TaskService {
         userId,
       },
     });
+
+    // Auto-assign immediate tasks to the current time slot
+    if (data.type === 'immediate') {
+      try {
+        const currentSlot = getCurrentTimeSlot();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of day
+
+        await assignmentService.createAssignment(userId, {
+          taskId: task.id,
+          date: today.toISOString(),
+          slot: currentSlot,
+        });
+      } catch (error) {
+        // If assignment creation fails (e.g., duplicate), silently continue
+        // The task is already created, so don't fail the entire operation
+        console.error('Failed to auto-assign immediate task:', error);
+      }
+    }
 
     return task;
   }

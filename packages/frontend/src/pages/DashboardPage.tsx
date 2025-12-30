@@ -1,6 +1,6 @@
 import { useTasks } from '../hooks/useTasks';
 import { SummaryCards } from '../components/dashboard/SummaryCards';
-import { ImmediateTodosList } from '../components/dashboard/ImmediateTodosList';
+import { CurrentFocusTasks } from '../components/dashboard/CurrentFocusTasks';
 import { TodosByDate } from '../components/dashboard/TodosByDate';
 import { FollowUpReminders } from '../components/dashboard/FollowUpReminders';
 import { CompletedTasksList } from '../components/dashboard/CompletedTasksList';
@@ -32,17 +32,17 @@ export function DashboardPage() {
   const completed = completedTasks || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-        <p className="text-gray-600">
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Dashboard</h1>
+        <p className="text-sm text-gray-600">
           Overview of all your tasks and reminders
         </p>
       </div>
 
       <SummaryCards tasks={pending} />
 
-      <ImmediateTodosList tasks={pending} />
+      <CurrentFocusTasks tasks={pending} />
 
       <TodosByDate tasks={pending} />
 

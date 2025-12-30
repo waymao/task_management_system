@@ -17,23 +17,23 @@ export function SummaryCards({ tasks }: SummaryCardsProps) {
   const immediateCount = tasks.filter((t) => t.type === 'immediate').length;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-600">Today</h3>
-        <p className="text-3xl font-bold text-primary-600 mt-2">{todayCount}</p>
-        <p className="text-xs text-gray-500 mt-1">tasks due today</p>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="bg-white rounded-lg shadow p-4">
+        <h3 className="text-xs font-medium text-gray-600">Today</h3>
+        <p className="text-2xl font-bold text-primary-600 mt-1">{todayCount}</p>
+        <p className="text-xs text-gray-500 mt-0.5">tasks due today</p>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-600">Overdue</h3>
-        <p className="text-3xl font-bold text-red-600 mt-2">{overdueCount}</p>
-        <p className="text-xs text-gray-500 mt-1">tasks past due</p>
+      <div className="bg-white rounded-lg shadow p-4">
+        <h3 className="text-xs font-medium text-gray-600">Overdue</h3>
+        <p className="text-2xl font-bold text-red-600 mt-1">{overdueCount}</p>
+        <p className="text-xs text-gray-500 mt-0.5">tasks past due</p>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-sm font-medium text-gray-600">Immediate</h3>
-        <p className="text-3xl font-bold text-yellow-600 mt-2">{immediateCount}</p>
-        <p className="text-xs text-gray-500 mt-1">tasks need attention</p>
+      <div className="bg-white rounded-lg shadow p-4">
+        <h3 className="text-xs font-medium text-gray-600">Immediate</h3>
+        <p className="text-2xl font-bold text-yellow-600 mt-1">{immediateCount}</p>
+        <p className="text-xs text-gray-500 mt-0.5">tasks need attention</p>
       </div>
     </div>
   );

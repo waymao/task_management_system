@@ -48,6 +48,10 @@ export class AssignmentService {
   async getAssignments(userId: string, query: ListAssignmentsQuery) {
     const where: any = {
       userId,
+      // Filter out assignments for deleted tasks
+      task: {
+        deletedAt: null,
+      },
     };
 
     if (query.date) {
@@ -85,6 +89,10 @@ export class AssignmentService {
       where: {
         id: assignmentId,
         userId,
+        // Filter out assignments for deleted tasks
+        task: {
+          deletedAt: null,
+        },
       },
       include: {
         task: true,

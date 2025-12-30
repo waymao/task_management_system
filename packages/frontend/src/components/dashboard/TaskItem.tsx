@@ -1,139 +1,76 @@
-import { useState } from 'react';
-import { Button } from '../common/Button';
-import { useCompleteTask, useDeleteTask, useUpdateTask } from '../../hooks/useTasks';
+import { useCompleteTask, useUncompleteTask } from '../../hooks/useTasks';
 import { formatDate, isOverdue } from '../../utils/date';
 import type { Task } from '../../types';
 
 interface TaskItemProps {
   task: Task;
+  onClick?: () => void;
 }
 
-export function TaskItem({ task }: TaskItemProps) {
-  const [showActions, setShowActions] = useState(false);
-  const [isEditingDate, setIsEditingDate] = useState(false);
-  const [newDate, setNewDate] = useState(task.dueDate || task.followUpDate || '');
-
+export function TaskItem({ task, onClick }: TaskItemProps) {
   const completeTask = useCompleteTask();
-  const deleteTask = useDeleteTask();
-  const updateTask = useUpdateTask();
+  const uncompleteTask = useUncompleteTask();
 
-  const handleComplete = () => {
-    completeTask.mutate(task.id);
-  };
-
-  const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this task?')) {
-      deleteTask.mutate(task.id);
-    }
-  };
-
-  const handleSaveDate = () => {
-    const updateData: any = {};
-    if (task.type === 'todo') {
-      updateData.dueDate = newDate;
-    } else if (task.type === 'delegated') {
-      updateData.followUpDate = newDate;
-    }
-
-    updateTask.mutate({ id: task.id, data: updateData });
-    setIsEditingDate(false);
-  };
-
-  const handleCancelEdit = () => {
-    setNewDate(task.dueDate || task.followUpDate || '');
-    setIsEditingDate(false);
-  };
-
+  const isCompleted = task.status === 'completed';
   const isTaskOverdue = task.dueDate ? isOverdue(task.dueDate) : false;
+
+  const handleToggleComplete = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    if (isCompleted) {
+      uncompleteTask.mutate(task.id);
+    } else {
+      completeTask.mutate(task.id);
+    }
+  };
 
   return (
     <div
       className={`
-        flex items-start gap-3 p-4 rounded-lg border transition-all
-        ${showActions ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-200'}
-        hover:shadow-md
+        flex items-start gap-2 p-2 rounded-lg border transition-all cursor-pointer
+        ${isCompleted ? 'bg-gray-50 border-gray-200 opacity-75' : 'bg-white border-gray-200'}
+        hover:shadow-md hover:border-gray-300
       `}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
+      onClick={onClick}
     >
       <input
         type="checkbox"
-        checked={false}
-        onChange={handleComplete}
-        className="mt-1 h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+        checked={isCompleted}
+        onChange={handleToggleComplete}
+        onClick={(e) => e.stopPropagation()}
+        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer flex-shrink-0"
       />
 
-      <div className="flex-1">
-        <p className="font-medium text-gray-900">{task.title}</p>
-        {task.description && (
-          <p className="text-sm text-gray-600 mt-1">{task.description}</p>
-        )}
-        <div className="flex items-center gap-3 mt-2">
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm font-medium text-gray-900 ${isCompleted ? 'line-through' : ''}`}>
+          {task.title}
+        </p>
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
           <span className={`
-            text-xs px-2 py-0.5 rounded-full font-medium
+            text-xs px-1.5 py-0.5 rounded-full font-medium
             ${task.priority === 'high' ? 'bg-red-100 text-red-800' : ''}
             ${task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : ''}
             ${task.priority === 'low' ? 'bg-green-100 text-green-800' : ''}
           `}>
             {task.priority}
           </span>
-          {isEditingDate ? (
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={newDate ? new Date(newDate).toISOString().split('T')[0] : ''}
-                onChange={(e) => setNewDate(new Date(e.target.value).toISOString())}
-                className="text-xs border border-gray-300 rounded px-2 py-1"
-              />
-              <Button size="sm" variant="primary" onClick={handleSaveDate}>
-                Save
-              </Button>
-              <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
-                Cancel
-              </Button>
-            </div>
-          ) : (
-            <>
-              {task.dueDate && (
-                <span
-                  className={`text-xs cursor-pointer hover:underline ${isTaskOverdue ? 'text-red-600 font-semibold' : 'text-gray-600'}`}
-                  onClick={() => setIsEditingDate(true)}
-                >
-                  {isTaskOverdue ? 'Overdue: ' : 'Due: '}
-                  {formatDate(task.dueDate)}
-                </span>
-              )}
-              {task.delegatedTo && (
-                <span className="text-xs text-purple-600">
-                  Delegated to: {task.delegatedTo}
-                </span>
-              )}
-              {task.followUpDate && (
-                <span
-                  className="text-xs text-gray-600 cursor-pointer hover:underline"
-                  onClick={() => setIsEditingDate(true)}
-                >
-                  Follow-up: {formatDate(task.followUpDate)}
-                </span>
-              )}
-            </>
+          {task.dueDate && (
+            <span className={`text-xs ${isTaskOverdue ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
+              {isTaskOverdue ? 'Overdue: ' : 'Due: '}
+              {formatDate(task.dueDate)}
+            </span>
+          )}
+          {task.delegatedTo && (
+            <span className="text-xs text-purple-600">
+              → {task.delegatedTo}
+            </span>
+          )}
+          {task.followUpDate && (
+            <span className="text-xs text-blue-600">
+              Follow-up: {formatDate(task.followUpDate)}
+            </span>
           )}
         </div>
       </div>
-
-      {showActions && !isEditingDate && (
-        <div className="flex gap-2">
-          <Button size="sm" variant="ghost" onClick={() => setIsEditingDate(true)}>
-            Edit
-          </Button>
-          <Button size="sm" variant="primary" onClick={handleComplete}>
-            Complete
-          </Button>
-          <Button size="sm" variant="danger" onClick={handleDelete}>
-            Delete
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
