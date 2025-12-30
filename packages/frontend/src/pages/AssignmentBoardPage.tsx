@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { format, addWeeks, subWeeks, startOfWeek, addDays, startOfDay, endOfDay } from 'date-fns';
+import { useState, useEffect } from 'react';
+import { format, addWeeks, subWeeks, startOfWeek, addDays, startOfDay, endOfDay, isToday } from 'date-fns';
 import { useAssignments, useUnassignedTasks, useCreateAssignment, useDeleteAssignment } from '../hooks/useAssignments';
 import { useFollowUpTasks, useCompleteTask, useUncompleteTask } from '../hooks/useTasks';
 import { useGoogleCalendarEvents, useRefreshGoogleCalendarEvents } from '../hooks/useGoogleCalendar';
@@ -20,6 +20,15 @@ const SLOT_LABELS: Record<TimeSlot, string> = {
   evening: '🌙 Evening',
 };
 
+// Helper function to get current time slot
+const getCurrentTimeSlot = (): TimeSlot => {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 18) return 'afternoon';
+  if (hour >= 18 && hour < 24) return 'evening';
+  return 'allday';
+};
+
 export function AssignmentBoardPage() {
   const [currentDay, setCurrentDay] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
@@ -30,6 +39,16 @@ export function AssignmentBoardPage() {
   const [hoveredEvent, setHoveredEvent] = useState<{ event: any; x: number; y: number } | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [currentTimeSlot, setCurrentTimeSlot] = useState<TimeSlot>(getCurrentTimeSlot());
+
+  // Update current time slot every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTimeSlot(getCurrentTimeSlot());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Calculate days based on view mode
   const numDays = viewMode === 'day' ? 1 : viewMode === '3days' ? 3 : 7;
@@ -290,14 +309,16 @@ export function AssignmentBoardPage() {
               const followUps = slot === 'allday' ? getFollowUpsForDate(day) : [];
               const calendarEvents = getGoogleEventsForSlot(day, slot);
               const isOver = isDragOverThisSlot(day, slot);
+              const isCurrentTimeBlock = isToday(day) && slot === currentTimeSlot;
 
               return (
                 <div
                   key={slot}
                   className={`
                     h-48 p-2 rounded-lg border-2 transition-all
-                    ${isOver ? 'border-primary-500 bg-primary-50 border-dashed' : 'border-gray-200 bg-white'}
-                    hover:border-gray-300
+                    ${isOver ? 'border-primary-500 bg-primary-50 border-dashed' : ''}
+                    ${isCurrentTimeBlock && !isOver ? 'border-blue-300 hover:border-blue-500' : ''}
+                    ${!isOver && !isCurrentTimeBlock ? 'border-gray-200 bg-white hover:border-gray-300' : ''}
                   `}
                   onDragOver={(e) => handleDragOver(e, day, slot)}
                   onDragLeave={handleDragLeave}

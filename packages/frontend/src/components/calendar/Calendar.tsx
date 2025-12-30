@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { format } from 'date-fns';
+import { useState, useEffect } from 'react';
+import { format, isToday } from 'date-fns';
 import { Button } from '../common/Button';
 import { CalendarView, getMonthDays, getWeekDays, navigateCalendar, formatCalendarTitle, groupTasksByDate } from '../../utils/calendar';
 import type { Task } from '../../types';
@@ -13,6 +13,16 @@ interface CalendarProps {
 export function Calendar({ tasks, onDateClick, onTaskClick }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('month');
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update current time every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handlePrevious = () => {
     setCurrentDate(prev => navigateCalendar(prev, 'prev', view));
@@ -110,6 +120,14 @@ export function Calendar({ tasks, onDateClick, onTaskClick }: CalendarProps) {
                 <div className={`text-lg font-semibold ${day.isToday ? 'text-primary-600' : ''}`}>
                   {format(day.date, 'd')}
                 </div>
+                {day.isToday && (
+                  <div className="mt-1 flex items-center justify-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                    <div className="text-xs text-blue-600 font-medium">
+                      {format(currentTime, 'h:mm a')}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 {dayTasks.map(task => (
@@ -140,6 +158,7 @@ export function Calendar({ tasks, onDateClick, onTaskClick }: CalendarProps) {
   const renderDayView = () => {
     const dateKey = format(currentDate, 'yyyy-MM-dd');
     const dayTasks = tasksByDate.get(dateKey) || [];
+    const isTodayView = isToday(currentDate);
 
     return (
       <div className="max-w-2xl mx-auto">
@@ -147,6 +166,14 @@ export function Calendar({ tasks, onDateClick, onTaskClick }: CalendarProps) {
           <div className="text-center mb-6">
             <div className="text-2xl font-bold text-gray-900">{format(currentDate, 'd')}</div>
             <div className="text-sm text-gray-500">{format(currentDate, 'EEEE, MMMM yyyy')}</div>
+            {isTodayView && (
+              <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-full">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <div className="text-sm font-medium text-blue-700">
+                  Current time: {format(currentTime, 'h:mm a')}
+                </div>
+              </div>
+            )}
           </div>
 
           {dayTasks.length === 0 ? (
